@@ -1,4 +1,4 @@
-package Game;
+package org.example;
 
 public class DotBullet extends Bullet {
     public static final double BASE_DAMAGE = 1.0;

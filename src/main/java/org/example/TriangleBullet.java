@@ -1,4 +1,4 @@
-package Game;
+package org.example;
 
 public class TriangleBullet extends Bullet{
     public static final double BASE_DAMAGE = 3.0;

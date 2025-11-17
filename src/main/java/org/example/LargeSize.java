@@ -1,4 +1,4 @@
-package Game;
+package org.example;
 
 public class LargeSize implements Size {
     @Override

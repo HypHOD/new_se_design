@@ -1,5 +1,5 @@
-package Game;
-import Game.*;
+package org.example;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -10,35 +10,31 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Random;
-import java.util.Map;
-import java.util.HashMap;
 
 public class GameFrame extends Frame {
     // 定义duck行为组
     private DuckBark.Duck duck;
-    private final DuckBark.DuckAction getPointAction= new DuckBark.GetPointAction();
-
+    private final DuckBark.DuckAction getPointAction = new DuckBark.GetPointAction();
 
     int totalScore = 0;
     long startTimeMillis = 0L;
     // 游戏资源
-    Image bg = loadImage("../img/bg.png");
-    Image tank = loadImage("../img/tank.png");
-    Image clickAreaImg = loadImage("../img/click_area.png");
+    Image bg = loadImage("img/bg.png");
+    Image tank = loadImage("img/tank.png");
+    Image clickAreaImg = loadImage("img/click_area.png");
 
     // 衣服图片资源（按季节-时间-天气分类）
-    Image initialClothesImg = loadImage("../img/clothes/initial_clothes.png");
-    Image summerDaySunny = loadImage("../img/clothes/summer_day_sunny.png");
-    Image summerDayRainy = loadImage("../img/clothes/summer_day_rainy.png");
-    Image summerNightSunny = loadImage("../img/clothes/summer_night_sunny.png");
-    Image summerNightRainy = loadImage("../img/clothes/summer_night_rainy.png");
-    Image winterDaySunny = loadImage("../img/clothes/winter_day_sunny.png");
-    Image winterDayRainy = loadImage("../img/clothes/winter_day_rainy.png");
-    Image winterNightSunny = loadImage("../img/clothes/winter_night_sunny.png");
-    Image winterNightRainy = loadImage("../img/clothes/winter_night_rainy.png");
+    Image initialClothesImg = loadImage("img/clothes/initial_clothes.png");
+    Image summerDaySunny = loadImage("img/clothes/summer_day_sunny.png");
+    Image summerDayRainy = loadImage("img/clothes/summer_day_rainy.png");
+    Image summerNightSunny = loadImage("img/clothes/summer_night_sunny.png");
+    Image summerNightRainy = loadImage("img/clothes/summer_night_rainy.png");
+    Image winterDaySunny = loadImage("img/clothes/winter_day_sunny.png");
+    Image winterDayRainy = loadImage("img/clothes/winter_day_rainy.png");
+    Image winterNightSunny = loadImage("img/clothes/winter_night_sunny.png");
+    Image winterNightRainy = loadImage("img/clothes/winter_night_rainy.png");
 
     Image currentClothesImg = initialClothesImg;
 
@@ -60,7 +56,8 @@ public class GameFrame extends Frame {
     int bulletSpawnRate = 10; // 子弹生成概率（数值越大生成越慢）
 
     // 衣服颜色配置（wear对话框使用）
-//    private final Map<String, Map<String, Map<String, Color>>> clothesColorConfig = new HashMap<>();
+    // private final Map<String, Map<String, Map<String, Color>>> clothesColorConfig
+    // = new HashMap<>();
 
     public static void main(String[] args) {
         GameFrame frame = new GameFrame();
@@ -100,7 +97,7 @@ public class GameFrame extends Frame {
             public void mouseClicked(MouseEvent e) {
                 int x = e.getX();
                 int y = e.getY();
-                if(clickableArea.contains(x, y)){
+                if (clickableArea.contains(x, y)) {
                     showInputDialog();
                 }
             }
@@ -110,7 +107,7 @@ public class GameFrame extends Frame {
     }
 
     private void showInputDialog() {
-        JDialog inputDialog = new JDialog(this,"Input cmd",true);
+        JDialog inputDialog = new JDialog(this, "Input cmd", true);
         inputDialog.setSize(300, 200); // 增大窗口高度以容纳提示区域
         inputDialog.setLocationRelativeTo(null);
         inputDialog.setLayout(new BorderLayout(10, 10)); // 设置组件间距
@@ -164,8 +161,10 @@ public class GameFrame extends Frame {
     }
 
     private void handleInput(String command) {
-        if(command.isEmpty()){ return; }
-        switch (command){
+        if (command.isEmpty()) {
+            return;
+        }
+        switch (command) {
             case "start":
                 // 启动游戏：设置状态为true，重置时间和分数
                 isGameStarted = true;
@@ -188,10 +187,11 @@ public class GameFrame extends Frame {
                 break;
         }
     }
+
     // ----------- 对话功能 -----------
-    private void showTalkDialog(){
-        JDialog dialog = new JDialog(this,"Talk with Bot",true);
-        dialog.setSize(300,500);
+    private void showTalkDialog() {
+        JDialog dialog = new JDialog(this, "Talk with Bot", true);
+        dialog.setSize(300, 500);
         dialog.setLocationRelativeTo(null);
         // 历史内容
         JTextArea textArea = new JTextArea();
@@ -200,7 +200,7 @@ public class GameFrame extends Frame {
         textArea.setEditable(false);
         textArea.setPreferredSize(new Dimension(300, 400));
 
-        dialog.add(textArea,BorderLayout.NORTH);
+        dialog.add(textArea, BorderLayout.NORTH);
         // 输入框
         JTextField inputField = new JTextField();
         inputField.setPreferredSize(new Dimension(300, 50));
@@ -208,28 +208,29 @@ public class GameFrame extends Frame {
         // 发送按钮
         JButton sendButton = new JButton("Send");
         sendButton.addActionListener(e -> {
-            String user_talk=inputField.getText().trim();
-            if(!user_talk.isEmpty()){
-                System.out.println("user_talk:"+user_talk);
+            String user_talk = inputField.getText().trim();
+            if (!user_talk.isEmpty()) {
+                System.out.println("user_talk:" + user_talk);
                 String history = textArea.getText();
                 textArea.setText(history + "用户：" + user_talk + "\n");
                 inputField.setText("");
                 textArea.setCaretPosition(textArea.getDocument().getLength());
-                try{
-//                    String aiReply = getAiReply(userTalk);
-//                    textArea.setText(textArea.getText() + "Bot：" + aiReply + "\n\n");
-                }catch (Exception err){
-                    System.out.println("Bot can not reply beacuse:"+err.getMessage());
+                try {
+                    // String aiReply = getAiReply(userTalk);
+                    // textArea.setText(textArea.getText() + "Bot：" + aiReply + "\n\n");
+                } catch (Exception err) {
+                    System.out.println("Bot can not reply beacuse:" + err.getMessage());
                 }
             }
         });
         inputField.addActionListener(e -> sendButton.doClick());
-        dialog.add(sendButton,BorderLayout.SOUTH);
+        dialog.add(sendButton, BorderLayout.SOUTH);
 
         dialog.setVisible(true);
     }
 
-    // -------------------------- 1. 衣服颜色配置对话框（wear命令）相关代码 --------------------------
+    // -------------------------- 1. 衣服颜色配置对话框（wear命令）相关代码
+    // --------------------------
     // 初始化衣服图片配置：季节->时间->天气->衣服图片
     private void initClothesImgConfig() {
         // 夏季配置
@@ -260,7 +261,7 @@ public class GameFrame extends Frame {
 
     // 衣服图片选择对话框
     private void showClothesDialog() {
-        Dialog clothesDialog = new Dialog(this, "选择衣服图片", true);
+        JDialog clothesDialog = new JDialog(this, "选择衣服图片", true);
         clothesDialog.setSize(400, 300);
         clothesDialog.setLocationRelativeTo(this);
         clothesDialog.setLayout(null);
@@ -272,7 +273,7 @@ public class GameFrame extends Frame {
         seasonLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         clothesDialog.add(seasonLabel);
 
-        String[] seasons = {"夏季", "冬季"};
+        String[] seasons = { "夏季", "冬季" };
         JComboBox<String> seasonCombo = new JComboBox<>(seasons);
         seasonCombo.setBounds(120, 60, 100, 25);
         seasonCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
@@ -284,7 +285,7 @@ public class GameFrame extends Frame {
         timeLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         clothesDialog.add(timeLabel);
 
-        String[] times = {"白天", "晚上"};
+        String[] times = { "白天", "晚上" };
         JComboBox<String> timeCombo = new JComboBox<>(times);
         timeCombo.setBounds(120, 110, 100, 25);
         timeCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
@@ -296,7 +297,7 @@ public class GameFrame extends Frame {
         weatherLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         clothesDialog.add(weatherLabel);
 
-        String[] weathers = {"晴天", "雨天"};
+        String[] weathers = { "晴天", "雨天" };
         JComboBox<String> weatherCombo = new JComboBox<>(weathers);
         weatherCombo.setBounds(120, 160, 100, 25);
         weatherCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
@@ -338,8 +339,8 @@ public class GameFrame extends Frame {
         clothesDialog.setVisible(true);
     }
 
-
-    // -------------------------- 2. 代码行数统计对话框（count命令）相关代码 --------------------------
+    // -------------------------- 2. 代码行数统计对话框（count命令）相关代码
+    // --------------------------
     // 代码行数统计结果模型
     static class CodeLineCountResult {
         private int fileCount;
@@ -357,11 +358,25 @@ public class GameFrame extends Frame {
         }
 
         // Getters
-        public int getFileCount() { return fileCount; }
-        public int getTotalLines() { return totalLines; }
-        public int getEmptyLines() { return emptyLines; }
-        public int getCommentLines() { return commentLines; }
-        public int getCodeLines() { return codeLines; }
+        public int getFileCount() {
+            return fileCount;
+        }
+
+        public int getTotalLines() {
+            return totalLines;
+        }
+
+        public int getEmptyLines() {
+            return emptyLines;
+        }
+
+        public int getCommentLines() {
+            return commentLines;
+        }
+
+        public int getCodeLines() {
+            return codeLines;
+        }
     }
 
     // 代码行数统计对话框（修复所有按钮为JButton）
@@ -414,10 +429,10 @@ public class GameFrame extends Frame {
         countDialog.add(langLabel);
 
         Map<String, String[]> langExtensions = new HashMap<>();
-        langExtensions.put("Java", new String[]{".java"});
-        langExtensions.put("Python", new String[]{".py"});
-        langExtensions.put("JavaScript", new String[]{".js"});
-        langExtensions.put("All", new String[]{".java", ".py", ".js", ".cpp", ".c", ".html", ".css"});
+        langExtensions.put("Java", new String[] { ".java" });
+        langExtensions.put("Python", new String[] { ".py" });
+        langExtensions.put("JavaScript", new String[] { ".js" });
+        langExtensions.put("All", new String[] { ".java", ".py", ".js", ".cpp", ".c", ".html", ".css" });
 
         String[] languages = langExtensions.keySet().toArray(new String[0]);
         JComboBox<String> langCombo = new JComboBox<>(languages);
@@ -479,8 +494,7 @@ public class GameFrame extends Frame {
                                 folderPath, language,
                                 result.getFileCount(), result.getTotalLines(),
                                 result.getEmptyLines(), result.getCommentLines(),
-                                result.getCodeLines()
-                        );
+                                result.getCodeLines());
                         showTipDialog(resultMsg);
                     });
                 } catch (Exception ex) {
@@ -504,7 +518,8 @@ public class GameFrame extends Frame {
     }
 
     // 代码行数统计核心方法
-    private CodeLineCountResult countCodeLines(File folder, String[] extensions, boolean countEmpty, boolean countComment) throws IOException {
+    private CodeLineCountResult countCodeLines(File folder, String[] extensions, boolean countEmpty,
+            boolean countComment) throws IOException {
         int fileCount = 0;
         int totalLines = 0;
         int emptyLines = 0;
@@ -520,7 +535,8 @@ public class GameFrame extends Frame {
             return false;
         });
 
-        if (files == null) return new CodeLineCountResult(0, 0, 0, 0, 0);
+        if (files == null)
+            return new CodeLineCountResult(0, 0, 0, 0, 0);
 
         for (File file : files) {
             if (file.isFile()) {
@@ -560,8 +576,10 @@ public class GameFrame extends Frame {
 
         // 计算有效代码行数
         int codeLines = totalLines;
-        if (!countEmpty) codeLines -= emptyLines;
-        if (!countComment) codeLines -= commentLines;
+        if (!countEmpty)
+            codeLines -= emptyLines;
+        if (!countComment)
+            codeLines -= commentLines;
 
         return new CodeLineCountResult(fileCount, totalLines, emptyLines, commentLines, codeLines);
     }
@@ -608,6 +626,7 @@ public class GameFrame extends Frame {
     Size small = new SmallSize();
     Size medium = new MediumSize();
     Size large = new LargeSize();
+
     // 子弹类
     class Bullet {
         int x; // 子弹x坐标
@@ -616,7 +635,7 @@ public class GameFrame extends Frame {
         int width = 10; // 子弹宽度
         int height = 10; // 子弹高度
         String kind;
-        double damage=1.0;
+        double damage = 1.0;
 
         // 子弹构造方法
         public Bullet(int startX, int startY, int speed, String kind, Size size) {
@@ -628,15 +647,15 @@ public class GameFrame extends Frame {
                 case "Cross": {
                     this.damage = new CrossBullet(size).calculateDamage();
                 }
-                break;
+                    break;
                 case "Triangle": {
                     this.damage = new TriangleBullet(size).calculateDamage();
                 }
-                break;
+                    break;
                 case "Dot": {
                     this.damage = new DotBullet(size).calculateDamage();
                 }
-                break;
+                    break;
                 default:
                     break;
             }
@@ -646,22 +665,23 @@ public class GameFrame extends Frame {
         public void update() {
             this.x += this.speed;
         }
+
         // 绘制子弹
         public void draw(Graphics g) {
             // 根据种类绘制不同的子弹
             switch (kind) {
-                case "Cross":{
+                case "Cross": {
                     // 画矩形
                     g.setColor(Color.BLACK);
-                    g.fillRect(x, y, (int) (width*this.damage), (int) (height*this.damage));
+                    g.fillRect(x, y, (int) (width * this.damage), (int) (height * this.damage));
                 }
-                break;
-                case "Dot":{
+                    break;
+                case "Dot": {
                     // 画圆形边框
                     g.setColor(Color.YELLOW);
-                    g.drawRoundRect(x, y, (int) (width*this.damage), (int) (height*this.damage), 10, 10);
+                    g.drawRoundRect(x, y, (int) (width * this.damage), (int) (height * this.damage), 10, 10);
                 }
-                break;
+                    break;
                 default:
                     break;
             }
@@ -708,7 +728,8 @@ public class GameFrame extends Frame {
 
                 // 随机生成不同类型和大小的子弹
                 switch (new Random().nextInt(7)) {
-                    case 0: break;
+                    case 0:
+                        break;
                     case 1:
                         bulletList.add(new Bullet(startX, startY, speed, "Cross", small));
                         break;
@@ -733,10 +754,14 @@ public class GameFrame extends Frame {
 
         // 更新坦克位置
         private void updateTankPos() {
-            if (left && tankX > 0) tankX -= 5;
-            if (right && tankX < getWidth() - tankWidth) tankX += 5;
-            if (up && tankY > 0) tankY -= 5;
-            if (down && tankY < getHeight() - tankHeight) tankY += 5;
+            if (left && tankX > 0)
+                tankX -= 5;
+            if (right && tankX < getWidth() - tankWidth)
+                tankX += 5;
+            if (up && tankY > 0)
+                tankY -= 5;
+            if (down && tankY < getHeight() - tankHeight)
+                tankY += 5;
         }
 
         // 更新所有子弹
@@ -749,9 +774,9 @@ public class GameFrame extends Frame {
                 Rectangle tankRect = new Rectangle(tankX, tankY, tankWidth, tankHeight);
                 if (bulletRect.intersects(tankRect)) {
                     totalScore += (int) bulletList.get(i).damage;
-//                    duck.act();
+                    // duck.act();
                     // 改为异步执行
-                    if(duck!=null){
+                    if (duck != null) {
                         duck.setAction(getPointAction);
                         DuckBark.AsyncActionUtil.execute(duck::act);
                     }
@@ -821,9 +846,11 @@ public class GameFrame extends Frame {
             }
         }
     }
+
     // 定义可点击区域
-    private final Rectangle clickableArea = new Rectangle(100,200,180,210);
-    private final Rectangle changeClothingArea = new Rectangle(300,200,180,210);
+    private final Rectangle clickableArea = new Rectangle(100, 200, 180, 210);
+    private final Rectangle changeClothingArea = new Rectangle(300, 200, 180, 210);
+
     // 绘制游戏元素
     @Override
     public void paint(Graphics g) {
@@ -831,32 +858,30 @@ public class GameFrame extends Frame {
         g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
         Color keepColor = g.getColor();
         // 绘制可点击图片
-        if(clickableArea!= null){
+        if (clickableArea != null) {
             g.drawImage(
                     clickAreaImg,
                     clickableArea.x, clickableArea.y,
                     clickableArea.width, clickableArea.height,
-                    this
-            );
+                    this);
         }
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 14));
         FontRenderContext frc = ((Graphics2D) g).getFontRenderContext();
         String clickableAreaText = "Click here";
         Rectangle2D textRect = g.getFont().getStringBounds(clickableAreaText, frc);
-        int textX1 = clickableArea.x + (int)((clickableArea.width - textRect.getWidth())/2);
-        int textY1 = clickableArea.y + (int)((clickableArea.height + textRect.getHeight())/2) - 3;
+        int textX1 = clickableArea.x + (int) ((clickableArea.width - textRect.getWidth()) / 2);
+        int textY1 = clickableArea.y + (int) ((clickableArea.height + textRect.getHeight()) / 2) - 3;
         g.drawString(clickableAreaText, textX1, textY1);
         g.setColor(keepColor);
 
-        //绘制衣服切换区域
-        if(changeClothingArea!= null){
+        // 绘制衣服切换区域
+        if (changeClothingArea != null) {
             g.drawImage(
                     currentClothesImg,
                     changeClothingArea.x, changeClothingArea.y,
                     changeClothingArea.width, changeClothingArea.height,
-                    this
-            );
+                    this);
         }
 
         // 绘制坦克
@@ -898,7 +923,7 @@ public class GameFrame extends Frame {
         int textY = 24;
         // 背景遮罩增强可读性
         Color oldColor = g.getColor();
-        g.setColor(new Color(0,0,0,120));
+        g.setColor(new Color(0, 0, 0, 120));
         g.fillRoundRect(textX - 8, textY - 20, textWidth + 16, 26, 8, 8);
         // 阴影 + 文字
         g.setColor(Color.BLACK);
@@ -913,15 +938,21 @@ public class GameFrame extends Frame {
 
     // 图像加载工具
     public Image loadImage(String imagePath) {
+
+        if (!imagePath.startsWith("/")) {
+            imagePath = "/" + imagePath;
+        }
+
         URL url = GameFrame.class.getResource(imagePath);
         if (url != null) {
             try {
                 return ImageIO.read(url);
-            } catch (Exception e) {
+            } catch (IOException e) {
+                System.err.println("图像读取失败：" + imagePath);
                 throw new RuntimeException("图像加载失败：" + imagePath, e);
             }
         }
-        System.err.println("图像路径不存在：" + imagePath);
+        System.err.println("图像文件不存在：" + imagePath);
         System.exit(0);
         return null;
     }

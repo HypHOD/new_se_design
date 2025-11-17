@@ -1,4 +1,4 @@
-package Game;
+package org.example;
 import java.io.IOException;
 
 public class DuckBark {

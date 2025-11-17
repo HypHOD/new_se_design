@@ -1,4 +1,4 @@
-package Game;
+package org.example;
 
 public abstract class Bullet {
     protected Size size;
