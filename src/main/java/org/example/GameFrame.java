@@ -12,6 +12,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -195,6 +197,44 @@ public class GameFrame extends Frame {
 
     // ----------- 对话功能 -----------
     private void showTalkDialog() {
+        // JDialog dialog = new JDialog(this, "Talk with Bot", true);
+        // dialog.setSize(300, 500);
+        // dialog.setLocationRelativeTo(null);
+        // // 历史内容
+        // JTextArea textArea = new JTextArea();
+        // textArea.setLineWrap(true);
+        // textArea.setWrapStyleWord(true);
+        // textArea.setEditable(false);
+        // textArea.setPreferredSize(new Dimension(300, 400));
+
+        // dialog.add(textArea, BorderLayout.NORTH);
+        // // 输入框
+        // JTextField inputField = new JTextField();
+        // inputField.setPreferredSize(new Dimension(300, 50));
+        // dialog.add(inputField);
+        // // 发送按钮
+        // JButton sendButton = new JButton("Send");
+        // sendButton.addActionListener(e -> {
+        // String user_talk = inputField.getText().trim();
+        // if (!user_talk.isEmpty()) {
+        // System.out.println("user_talk:" + user_talk);
+        // String history = textArea.getText();
+        // textArea.setText(history + "用户：" + user_talk + "\n");
+        // inputField.setText("");
+        // textArea.setCaretPosition(textArea.getDocument().getLength());
+        // try {
+        // // String aiReply = getAiReply(userTalk);
+        // // textArea.setText(textArea.getText() + "Bot：" + aiReply + "\n\n");
+        // } catch (Exception err) {
+        // System.out.println("Bot can not reply beacuse:" + err.getMessage());
+        // }
+        // }
+        // });
+        // inputField.addActionListener(e -> sendButton.doClick());
+        // dialog.add(sendButton, BorderLayout.SOUTH);
+
+        // dialog.setVisible(true);
+
         JDialog dialog = new JDialog(this, "Talk with Bot", true);
         dialog.setSize(300, 500);
         dialog.setLocationRelativeTo(null);
@@ -218,20 +258,69 @@ public class GameFrame extends Frame {
                 System.out.println("user_talk:" + user_talk);
                 String history = textArea.getText();
                 textArea.setText(history + "用户：" + user_talk + "\n");
+                // 清空输入并滚动到底部
                 inputField.setText("");
                 textArea.setCaretPosition(textArea.getDocument().getLength());
-                try {
-                    // String aiReply = getAiReply(userTalk);
-                    // textArea.setText(textArea.getText() + "Bot：" + aiReply + "\n\n");
-                } catch (Exception err) {
-                    System.out.println("Bot can not reply beacuse:" + err.getMessage());
-                }
+
+                // 异步生成 AI 回复，避免阻塞 UI
+                // 先显示占位提示
+                SwingUtilities.invokeLater(() -> {
+                    textArea.append("Bot：正在思考...\n\n");
+                    textArea.setCaretPosition(textArea.getDocument().getLength());
+                });
+
+                new Thread(() -> {
+                    try {
+                        String aiReply = getAiReply(user_talk);
+                        SwingUtilities.invokeLater(() -> {
+                            // 将回复追加到历史（保留占位亦可，这里直接追加）
+                            textArea.append("Bot：" + aiReply + "\n\n");
+                            textArea.setCaretPosition(textArea.getDocument().getLength());
+                        });
+                    } catch (Exception err) {
+                        SwingUtilities.invokeLater(() -> {
+                            textArea.append("Bot：回复失败：" + err.getMessage() + "\n\n");
+                            textArea.setCaretPosition(textArea.getDocument().getLength());
+                        });
+                    }
+                }).start();
             }
         });
         inputField.addActionListener(e -> sendButton.doClick());
         dialog.add(sendButton, BorderLayout.SOUTH);
 
         dialog.setVisible(true);
+    }
+
+    private String getAiReply(String userTalk) {
+        if (userTalk == null || userTalk.trim().isEmpty()) {
+            return "请说点什么～";
+        }
+        String lower = userTalk.toLowerCase();
+        try {
+            if (lower.contains("你好") || lower.contains("hello") || lower.contains("hi")) {
+                return "你好，我是本地助理，有什么我可以帮你的？";
+            }
+            if (lower.contains("时间") || lower.contains("现在几点") || lower.contains("几点")) {
+                return "当前时间：" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            }
+            if (lower.contains("帮助") || lower.contains("help")) {
+                return "可用命令：start / wear / count / talk。你也可以问我当前时间或打招呼。";
+            }
+            if (lower.contains("谢谢") || lower.contains("thanks")) {
+                return "不客气，乐意效劳。";
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 随机候选回复
+        String[] candidates = new String[] {
+                "这是个有趣的问题，但我还在学习中。",
+                "能详细描述一下么？",
+                "我不太确定，能换个说法吗？",
+                "嗯，我觉得可以试试其他方式来解决。"
+        };
+        return candidates[Math.abs(random.nextInt()) % candidates.length];
     }
 
     // -------------------------- 1. 衣服颜色配置对话框（wear命令）相关代码
