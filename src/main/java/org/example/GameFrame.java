@@ -470,7 +470,7 @@ public class GameFrame extends Frame {
         formatLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         countDialog.add(formatLabel);
 
-        String[] formats = new String[]{"csv", "json", "xlsx"};
+        String[] formats = new String[] { "csv", "json", "xlsx" };
         JComboBox<String> formatCombo = new JComboBox<>(formats);
         formatCombo.setBounds(260, 190, 80, 25);
         formatCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
@@ -558,9 +558,11 @@ public class GameFrame extends Frame {
                                         } else if (fmt.equalsIgnoreCase("xlsx")) {
                                             saveResultAsXLSX(result, outFile);
                                         }
-                                        SwingUtilities.invokeLater(() -> showTipDialog(resultMsg + "\n已保存到：" + outFile.getAbsolutePath()));
+                                        SwingUtilities.invokeLater(
+                                                () -> showTipDialog(resultMsg + "\n已保存到：" + outFile.getAbsolutePath()));
                                     } catch (Exception saveEx) {
-                                        SwingUtilities.invokeLater(() -> showTipDialog(resultMsg + "\n保存失败：" + saveEx.getMessage()));
+                                        SwingUtilities.invokeLater(
+                                                () -> showTipDialog(resultMsg + "\n保存失败：" + saveEx.getMessage()));
                                     }
                                 }).start();
                             }
@@ -659,13 +661,16 @@ public class GameFrame extends Frame {
     private void saveResultAsCSV(CodeLineCountResult result, File file) throws IOException {
         try (BufferedWriter bw = java.nio.file.Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
             bw.write("fileCount,totalLines,emptyLines,commentLines,codeLines\n");
-            bw.write(String.format("%d,%d,%d,%d,%d\n", result.getFileCount(), result.getTotalLines(), result.getEmptyLines(), result.getCommentLines(), result.getCodeLines()));
+            bw.write(String.format("%d,%d,%d,%d,%d\n", result.getFileCount(), result.getTotalLines(),
+                    result.getEmptyLines(), result.getCommentLines(), result.getCodeLines()));
         }
     }
 
     private void saveResultAsJSON(CodeLineCountResult result, File file) throws IOException {
-        String json = String.format("{\n  \"fileCount\": %d,\n  \"totalLines\": %d,\n  \"emptyLines\": %d,\n  \"commentLines\": %d,\n  \"codeLines\": %d\n}",
-                result.getFileCount(), result.getTotalLines(), result.getEmptyLines(), result.getCommentLines(), result.getCodeLines());
+        String json = String.format(
+                "{\n  \"fileCount\": %d,\n  \"totalLines\": %d,\n  \"emptyLines\": %d,\n  \"commentLines\": %d,\n  \"codeLines\": %d\n}",
+                result.getFileCount(), result.getTotalLines(), result.getEmptyLines(), result.getCommentLines(),
+                result.getCodeLines());
         java.nio.file.Files.write(file.toPath(), json.getBytes(StandardCharsets.UTF_8));
     }
 
