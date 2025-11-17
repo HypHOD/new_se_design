@@ -2,6 +2,8 @@ package org.example;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.font.FontRenderContext;
@@ -12,6 +14,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.List;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFRow;
 
 public class GameFrame extends Frame {
     // 定义duck行为组
@@ -453,6 +458,46 @@ public class GameFrame extends Frame {
         commentBox.setSelected(true);
         countDialog.add(commentBox);
 
+        // 保存结果选项
+        JCheckBox saveToFileBox = new JCheckBox("save result to file");
+        saveToFileBox.setBounds(30, 190, 160, 25);
+        saveToFileBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        countDialog.add(saveToFileBox);
+
+        // 格式选择
+        Label formatLabel = new Label("format:");
+        formatLabel.setBounds(200, 190, 60, 25);
+        formatLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        countDialog.add(formatLabel);
+
+        String[] formats = new String[]{"csv", "json", "xlsx"};
+        JComboBox<String> formatCombo = new JComboBox<>(formats);
+        formatCombo.setBounds(260, 190, 80, 25);
+        formatCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        countDialog.add(formatCombo);
+
+        // 保存路径输入
+        TextField savePathField = new TextField(System.getProperty("user.dir") + File.separator + "count_result.csv");
+        savePathField.setBounds(30, 220, 300, 25);
+        savePathField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        countDialog.add(savePathField);
+
+        JButton browseSaveBtn = new JButton("save to");
+        browseSaveBtn.setBounds(340, 220, 100, 25);
+        browseSaveBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
+        browseSaveBtn.setBackground(new Color(0, 0, 0));
+        browseSaveBtn.setBorderPainted(false);
+        browseSaveBtn.setFocusPainted(false);
+        browseSaveBtn.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setSelectedFile(new File(savePathField.getText()));
+            int result = fileChooser.showSaveDialog(countDialog);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                savePathField.setText(fileChooser.getSelectedFile().getAbsolutePath());
+            }
+        });
+        countDialog.add(browseSaveBtn);
+
         // 统计按钮（修复为JButton，添加样式方法）
         JButton countBtn = new JButton("start count");
         countBtn.setBounds(170, 220, 120, 30);
@@ -495,7 +540,33 @@ public class GameFrame extends Frame {
                                 result.getFileCount(), result.getTotalLines(),
                                 result.getEmptyLines(), result.getCommentLines(),
                                 result.getCodeLines());
-                        showTipDialog(resultMsg);
+                        // 如果勾选了保存，则在后台写入文件
+                        if (saveToFileBox.isSelected()) {
+                            String path = savePathField.getText().trim();
+                            String fmt = (String) formatCombo.getSelectedItem();
+                            if (path.isEmpty()) {
+                                showTipDialog("请先选择保存路径！\n" + resultMsg);
+                            } else {
+                                // 执行保存（在后台线程完成，回调提示）
+                                new Thread(() -> {
+                                    try {
+                                        File outFile = new File(path);
+                                        if (fmt.equalsIgnoreCase("csv")) {
+                                            saveResultAsCSV(result, outFile);
+                                        } else if (fmt.equalsIgnoreCase("json")) {
+                                            saveResultAsJSON(result, outFile);
+                                        } else if (fmt.equalsIgnoreCase("xlsx")) {
+                                            saveResultAsXLSX(result, outFile);
+                                        }
+                                        SwingUtilities.invokeLater(() -> showTipDialog(resultMsg + "\n已保存到：" + outFile.getAbsolutePath()));
+                                    } catch (Exception saveEx) {
+                                        SwingUtilities.invokeLater(() -> showTipDialog(resultMsg + "\n保存失败：" + saveEx.getMessage()));
+                                    }
+                                }).start();
+                            }
+                        } else {
+                            showTipDialog(resultMsg);
+                        }
                     });
                 } catch (Exception ex) {
                     SwingUtilities.invokeLater(() -> showTipDialog("统计失败：" + ex.getMessage()));
@@ -582,6 +653,43 @@ public class GameFrame extends Frame {
             codeLines -= commentLines;
 
         return new CodeLineCountResult(fileCount, totalLines, emptyLines, commentLines, codeLines);
+    }
+
+    // ---------- 保存统计结果的方法 ----------
+    private void saveResultAsCSV(CodeLineCountResult result, File file) throws IOException {
+        try (BufferedWriter bw = java.nio.file.Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
+            bw.write("fileCount,totalLines,emptyLines,commentLines,codeLines\n");
+            bw.write(String.format("%d,%d,%d,%d,%d\n", result.getFileCount(), result.getTotalLines(), result.getEmptyLines(), result.getCommentLines(), result.getCodeLines()));
+        }
+    }
+
+    private void saveResultAsJSON(CodeLineCountResult result, File file) throws IOException {
+        String json = String.format("{\n  \"fileCount\": %d,\n  \"totalLines\": %d,\n  \"emptyLines\": %d,\n  \"commentLines\": %d,\n  \"codeLines\": %d\n}",
+                result.getFileCount(), result.getTotalLines(), result.getEmptyLines(), result.getCommentLines(), result.getCodeLines());
+        java.nio.file.Files.write(file.toPath(), json.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void saveResultAsXLSX(CodeLineCountResult result, File file) throws IOException {
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            XSSFSheet sheet = workbook.createSheet("count");
+            XSSFRow header = sheet.createRow(0);
+            header.createCell(0).setCellValue("fileCount");
+            header.createCell(1).setCellValue("totalLines");
+            header.createCell(2).setCellValue("emptyLines");
+            header.createCell(3).setCellValue("commentLines");
+            header.createCell(4).setCellValue("codeLines");
+
+            XSSFRow data = sheet.createRow(1);
+            data.createCell(0).setCellValue(result.getFileCount());
+            data.createCell(1).setCellValue(result.getTotalLines());
+            data.createCell(2).setCellValue(result.getEmptyLines());
+            data.createCell(3).setCellValue(result.getCommentLines());
+            data.createCell(4).setCellValue(result.getCodeLines());
+
+            try (FileOutputStream fos = new FileOutputStream(file)) {
+                workbook.write(fos);
+            }
+        }
     }
 
     // 补充缺失的BufferedImage内部类（避免编译错误）
