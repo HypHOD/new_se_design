@@ -475,18 +475,18 @@ public class GameFrame extends Frame {
 
     // 代码行数统计对话框（修复所有按钮为JButton）
     private void showCountDialog() {
-        Dialog countDialog = new Dialog(this, "code line count", true);
-        countDialog.setSize(450, 350);
+        JDialog countDialog = new JDialog(this, "code line count", true);
+        countDialog.setSize(450, 420);
         countDialog.setLocationRelativeTo(this);
         countDialog.setLayout(null);
         countDialog.setBackground(Color.WHITE);
 
         // 标题
-        Label titleLabel = new Label("count code lines in folder");
-        titleLabel.setBounds(0, 20, 450, 20);
-        titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
-        titleLabel.setAlignment(Label.CENTER);
-        countDialog.add(titleLabel);
+        // Label titleLabel = new Label("count code lines in folder");
+        // titleLabel.setBounds(0, 20, 450, 20);
+        // titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
+        // titleLabel.setAlignment(Label.CENTER);
+        // countDialog.add(titleLabel);
 
         // 文件夹选择
         Label folderLabel = new Label("path:");
@@ -574,7 +574,7 @@ public class GameFrame extends Frame {
         JButton browseSaveBtn = new JButton("save to");
         browseSaveBtn.setBounds(340, 220, 100, 25);
         browseSaveBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
-        browseSaveBtn.setBackground(new Color(0, 0, 0));
+        // browseSaveBtn.setBackground(new Color(0, 0, 0));
         browseSaveBtn.setBorderPainted(false);
         browseSaveBtn.setFocusPainted(false);
         browseSaveBtn.addActionListener(e -> {
@@ -587,12 +587,12 @@ public class GameFrame extends Frame {
         });
         countDialog.add(browseSaveBtn);
 
-        // 统计按钮（修复为JButton，添加样式方法）
+        // 统计按钮
         JButton countBtn = new JButton("start count");
         countBtn.setBounds(170, 220, 120, 30);
         countBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countBtn.setBackground(new Color(66, 133, 244));
-        countBtn.setForeground(Color.BLACK);
+        countBtn.setBackground(new Color(10, 90, 160));
+        // countBtn.setForeground(Color.blue);
         countBtn.setBorderPainted(false); // 现在有效
         countBtn.setFocusPainted(false); // 现在有效
         countBtn.addActionListener(e -> {
