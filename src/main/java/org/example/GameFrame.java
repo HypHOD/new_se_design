@@ -132,6 +132,7 @@ public class GameFrame extends Frame {
                 "start - 开始游戏\n" +
                 "wear - 更换睡衣颜色\n" +
                 "count - 统计代码行数\n" +
+                "test - test\n" +
                 "talk - 与AI对话");
         // 添加滚动条（防止文本过多时溢出）
         JScrollPane scrollPane = new JScrollPane(tipArea);
@@ -186,45 +187,18 @@ public class GameFrame extends Frame {
                 showCountDialog(); // 打开代码行数统计对话框
                 break;
             case "talk":
-                showTipDialog("Input talk command");
+                // showTipDialog("Input talk command");
                 // todo 用户与ai对话
                 showTalkDialog();
                 break;
             case "test":
-                showTipDialog("This is a test command.");
+                // showTipDialog("This is a test command.");
                 showTestDialog();
                 break;
             default:
                 showTipDialog("Invalid command");
                 break;
         }
-    }
-
-    // ------------test--------------
-    private void showTestDialog() {
-        JDialog testDialog = new JDialog(this, "Test Dialog", true);
-        testDialog.setSize(720, 480);
-        testDialog.setLocationRelativeTo(null);
-        testDialog.setLayout(new BorderLayout());
-
-        JLabel label = new JLabel("This is a test dialog.");
-        label.setHorizontalAlignment(SwingConstants.CENTER);
-        testDialog.add(label, BorderLayout.NORTH);
-
-        // 选择统计文件夹,语言类型, 选项复选框, 保存结果选项, 格式选择, 保存路径输入, 统计按钮等组件
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new GridLayout(2, 2, 10, 10));
-        centerPanel.add(new JLabel("Test Component 1"));
-        centerPanel.add(new JLabel("Test Component 2"));
-        centerPanel.add(new JLabel("Test Component 3"));
-        centerPanel.add(new JLabel("Test Component 4"));
-        testDialog.add(centerPanel, BorderLayout.CENTER);
-
-        JButton closeButton = new JButton("Close");
-        closeButton.addActionListener(e -> testDialog.dispose());
-        testDialog.add(closeButton, BorderLayout.SOUTH);
-
-        testDialog.setVisible(true);
     }
 
     // ----------- 对话功能 -----------
@@ -505,28 +479,71 @@ public class GameFrame extends Frame {
         }
     }
 
+    // ------------test--------------
+    private void showTestDialog() {
+        JDialog testDialog = new JDialog(this, "Test Dialog", true);
+        testDialog.setSize(720, 480);
+        testDialog.setLocationRelativeTo(null);
+        testDialog.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel label = new JLabel("This is a test dialog.");
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        gbc.weightx = 1.0;
+        testDialog.add(label, gbc);
+
+        // 选择统计文件夹,语言类型, 选项复选框, 保存结果选项, 格式选择, 保存路径输入, 统计按钮等组件
+        JPanel centerPanel = new JPanel();
+        centerPanel.add(new JLabel("Test Component 1"));
+        centerPanel.add(new JLabel("Test Component 2"));
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        gbc.weightx = 1.0;
+        testDialog.add(centerPanel, gbc);
+
+        JButton closeButton = new JButton("Close");
+        closeButton.addActionListener(e -> testDialog.dispose());
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        gbc.weightx = 1.0;
+        testDialog.add(closeButton, gbc);
+
+        testDialog.setVisible(true);
+    }
+
     // 代码行数统计对话框（修复所有按钮为JButton）
     private void showCountDialog() {
         JDialog countDialog = new JDialog(this, "code line count", true);
-        countDialog.setSize(450, 420);
+        countDialog.setSize(720, 480);
         countDialog.setLocationRelativeTo(this);
         countDialog.setLayout(new BorderLayout());
         countDialog.setBackground(Color.WHITE);
 
         // 标题
-        Label titleLabel = new Label("count code lines in folder");
+        JLabel titleLabel = new JLabel("count code lines in folder");
         titleLabel.setBounds(0, 20, 450, 20);
         titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
-        titleLabel.setAlignment(Label.CENTER);
+        titleLabel.setAlignmentX(Label.CENTER);
         countDialog.add(titleLabel, BorderLayout.NORTH);
 
+        JPanel centerPanel = new JPanel();
+        centerPanel.setBackground(Color.blue);
+        countDialog.add(centerPanel, BorderLayout.CENTER);
+
         // 文件夹选择
-        Label folderLabel = new Label("path:");
+        JLabel folderLabel = new JLabel("path:");
         folderLabel.setBounds(30, 60, 80, 25);
         folderLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         countDialog.add(folderLabel);
 
-        TextField folderField = new TextField(System.getProperty("user.dir"));
+        JTextField folderField = new JTextField(System.getProperty("user.dir"));
         folderField.setBounds(120, 60, 250, 25);
         folderField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         countDialog.add(folderField);
@@ -549,7 +566,7 @@ public class GameFrame extends Frame {
         countDialog.add(browseBtn);
 
         // 语言类型选择
-        Label langLabel = new Label("language:");
+        JLabel langLabel = new JLabel("language:");
         langLabel.setBounds(30, 110, 80, 25);
         langLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         countDialog.add(langLabel);
@@ -586,7 +603,7 @@ public class GameFrame extends Frame {
         countDialog.add(saveToFileBox);
 
         // 格式选择
-        Label formatLabel = new Label("format:");
+        JLabel formatLabel = new JLabel("format:");
         formatLabel.setBounds(200, 190, 60, 25);
         formatLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         countDialog.add(formatLabel);
@@ -598,7 +615,7 @@ public class GameFrame extends Frame {
         countDialog.add(formatCombo);
 
         // 保存路径输入
-        TextField savePathField = new TextField(System.getProperty("user.dir") + File.separator + "count_result.csv");
+        JTextField savePathField = new JTextField(System.getProperty("user.dir") + File.separator + "count_result.csv");
         savePathField.setBounds(30, 220, 300, 25);
         savePathField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         countDialog.add(savePathField);
@@ -623,8 +640,8 @@ public class GameFrame extends Frame {
         JButton countBtn = new JButton("start count");
         countBtn.setBounds(170, 220, 120, 30);
         countBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        // countBtn.setBackground(new Color(10, 90, 160));
         countBtn.setForeground(Color.blue);
+        countBtn.setBorder(BorderFactory.createLineBorder(Color.blue, 1));
         countBtn.setBorderPainted(false); // 现在有效
         countBtn.setFocusPainted(false); // 现在有效
         countBtn.addActionListener(e -> {
