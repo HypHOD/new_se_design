@@ -1,14 +1,18 @@
 package org.example;
 
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import java.io.BufferedWriter;
-import java.io.FileOutputStream;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.Rectangle2D;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -16,9 +20,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.apache.poi.xssf.usermodel.XSSFRow;
 
 public class GameFrame extends Frame {
     // 定义duck行为组
@@ -189,10 +190,41 @@ public class GameFrame extends Frame {
                 // todo 用户与ai对话
                 showTalkDialog();
                 break;
+            case "test":
+                showTipDialog("This is a test command.");
+                showTestDialog();
+                break;
             default:
                 showTipDialog("Invalid command");
                 break;
         }
+    }
+
+    // ------------test--------------
+    private void showTestDialog() {
+        JDialog testDialog = new JDialog(this, "Test Dialog", true);
+        testDialog.setSize(720, 480);
+        testDialog.setLocationRelativeTo(null);
+        testDialog.setLayout(new BorderLayout());
+
+        JLabel label = new JLabel("This is a test dialog.");
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        testDialog.add(label, BorderLayout.NORTH);
+
+        // 选择统计文件夹,语言类型, 选项复选框, 保存结果选项, 格式选择, 保存路径输入, 统计按钮等组件
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new GridLayout(2, 2, 10, 10));
+        centerPanel.add(new JLabel("Test Component 1"));
+        centerPanel.add(new JLabel("Test Component 2"));
+        centerPanel.add(new JLabel("Test Component 3"));
+        centerPanel.add(new JLabel("Test Component 4"));
+        testDialog.add(centerPanel, BorderLayout.CENTER);
+
+        JButton closeButton = new JButton("Close");
+        closeButton.addActionListener(e -> testDialog.dispose());
+        testDialog.add(closeButton, BorderLayout.SOUTH);
+
+        testDialog.setVisible(true);
     }
 
     // ----------- 对话功能 -----------
@@ -478,15 +510,15 @@ public class GameFrame extends Frame {
         JDialog countDialog = new JDialog(this, "code line count", true);
         countDialog.setSize(450, 420);
         countDialog.setLocationRelativeTo(this);
-        countDialog.setLayout(null);
+        countDialog.setLayout(new BorderLayout());
         countDialog.setBackground(Color.WHITE);
 
         // 标题
-        // Label titleLabel = new Label("count code lines in folder");
-        // titleLabel.setBounds(0, 20, 450, 20);
-        // titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
-        // titleLabel.setAlignment(Label.CENTER);
-        // countDialog.add(titleLabel);
+        Label titleLabel = new Label("count code lines in folder");
+        titleLabel.setBounds(0, 20, 450, 20);
+        titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
+        titleLabel.setAlignment(Label.CENTER);
+        countDialog.add(titleLabel, BorderLayout.NORTH);
 
         // 文件夹选择
         Label folderLabel = new Label("path:");
@@ -591,8 +623,8 @@ public class GameFrame extends Frame {
         JButton countBtn = new JButton("start count");
         countBtn.setBounds(170, 220, 120, 30);
         countBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countBtn.setBackground(new Color(10, 90, 160));
-        // countBtn.setForeground(Color.blue);
+        // countBtn.setBackground(new Color(10, 90, 160));
+        countBtn.setForeground(Color.blue);
         countBtn.setBorderPainted(false); // 现在有效
         countBtn.setFocusPainted(false); // 现在有效
         countBtn.addActionListener(e -> {
@@ -666,7 +698,7 @@ public class GameFrame extends Frame {
 
             countDialog.dispose();
         });
-        countDialog.add(countBtn);
+        countDialog.add(countBtn, BorderLayout.SOUTH);
 
         // 关闭事件
         countDialog.addWindowListener(new WindowAdapter() {
