@@ -191,10 +191,6 @@ public class GameFrame extends Frame {
                 // todo 用户与ai对话
                 showTalkDialog();
                 break;
-            case "test":
-                // showTipDialog("This is a test command.");
-                showTestDialog();
-                break;
             default:
                 showTipDialog("Invalid command");
                 break;
@@ -479,153 +475,130 @@ public class GameFrame extends Frame {
         }
     }
 
-    // ------------test--------------
-    private void showTestDialog() {
-        JDialog testDialog = new JDialog(this, "Test Dialog", true);
-        testDialog.setSize(720, 480);
-        testDialog.setLocationRelativeTo(null);
-        testDialog.setLayout(new GridBagLayout());
+    // 代码行数统计对话框
+    private void showCountDialog() {
+
+        JDialog countDialog = new JDialog(this, "code line count", true);
+        countDialog.setSize(550, 350);
+        countDialog.setLocationRelativeTo(this);
+        countDialog.setLayout(new BorderLayout());
+        // countDialog.setBackground(Color.WHITE);
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+
+        // 左侧功能选择区
+        JPanel sidebar = new JPanel();
+        sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.PAGE_AXIS));
+        sidebar.setPreferredSize(new Dimension(200, 0));
+        sidebar.setBackground(new Color(240, 240, 240));
+        sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.LIGHT_GRAY));
+        // title
+        JLabel titleLabel = new JLabel("code line count");
+        titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        sidebar.add(Box.createVerticalStrut(10));
+        sidebar.add(titleLabel);
+        sidebar.add(Box.createVerticalStrut(20));
+
+        // select language
+        JPanel selectLangPanel = new JPanel();
+        JLabel langLabel = new JLabel("language:");
+        langLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        selectLangPanel.add(langLabel);
+
+        Map<String, String[]> langExtensions = new HashMap<>();
+        langExtensions.put("Java", new String[] { ".java" });
+        langExtensions.put("Python", new String[] { ".py" });
+        langExtensions.put("JavaScript", new String[] { ".js", ".jsx", ".ts", ".tsx"
+        });
+        langExtensions.put("All", new String[] { ".java", ".py", ".js", ".jsx",
+                ".ts", ".tsx" });
+        JComboBox<String> langCombo = new JComboBox<>(langExtensions.keySet().toArray(new String[0]));
+        langCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        selectLangPanel.add(langCombo);
+        sidebar.add(selectLangPanel);
+        sidebar.add(Box.createVerticalStrut(5));
+
+        // 是否统计空行,注释行
+        JPanel checkBoxPanel = new JPanel();
+        JCheckBox emptyLineBox = new JCheckBox("count empty lines");
+        emptyLineBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        checkBoxPanel.add(emptyLineBox);
+
+        JCheckBox commentBox = new JCheckBox("count comments");
+        commentBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        checkBoxPanel.add(commentBox);
+        sidebar.add(checkBoxPanel);
+        // save to file
+        JCheckBox saveToFileBox = new JCheckBox("save result to file");
+        saveToFileBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        checkBoxPanel.add(saveToFileBox);
+
+        // format
+        JLabel formatLabel = new JLabel("format:");
+        formatLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        checkBoxPanel.add(formatLabel);
+
+        String[] formats = { "csv", "json", "xlsx" };
+        JComboBox<String> formatCombo = new JComboBox<>(formats);
+        formatCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        checkBoxPanel.add(formatCombo);
+        sidebar.add(Box.createVerticalStrut(5));
+
+        countDialog.add(sidebar, BorderLayout.WEST);
+
+        // 功能区
+        JPanel mainContent = new JPanel();
+        mainContent.setLayout(new GridBagLayout());
+        countDialog.add(mainContent, BorderLayout.CENTER);
         gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        JLabel label = new JLabel("This is a test dialog.");
-        label.setHorizontalAlignment(SwingConstants.CENTER);
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        gbc.weightx = 1.0;
-        testDialog.add(label, gbc);
-
-        // 选择统计文件夹,语言类型, 选项复选框, 保存结果选项, 格式选择, 保存路径输入, 统计按钮等组件
-        JPanel centerPanel = new JPanel();
-        centerPanel.add(new JLabel("Test Component 1"));
-        centerPanel.add(new JLabel("Test Component 2"));
+        // path
+        JLabel pathLabel = new JLabel("path:");
+        pathLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.gridwidth = 1;
-        gbc.weightx = 1.0;
-        testDialog.add(centerPanel, gbc);
+        gbc.insets = new Insets(0, 0, 10, 10);
+        mainContent.add(pathLabel, gbc);
 
-        JButton closeButton = new JButton("Close");
-        closeButton.addActionListener(e -> testDialog.dispose());
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.gridwidth = 2;
-        gbc.weightx = 1.0;
-        testDialog.add(closeButton, gbc);
+        JTextArea pathField = new JTextArea(System.getProperty("user.dir"));
+        pathField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        pathField.setLineWrap(true);
+        pathField.setWrapStyleWord(true);
+        JScrollPane pathScrollPane = new JScrollPane(pathField);
+        pathScrollPane.setPreferredSize(new Dimension(400, 25));
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        mainContent.add(pathScrollPane, gbc);
 
-        testDialog.setVisible(true);
-    }
-
-    // 代码行数统计对话框（修复所有按钮为JButton）
-    private void showCountDialog() {
-        JDialog countDialog = new JDialog(this, "code line count", true);
-        countDialog.setSize(720, 480);
-        countDialog.setLocationRelativeTo(this);
-        countDialog.setLayout(new BorderLayout());
-        countDialog.setBackground(Color.WHITE);
-
-        // 标题
-        JLabel titleLabel = new JLabel("count code lines in folder");
-        titleLabel.setBounds(0, 20, 450, 20);
-        titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
-        titleLabel.setAlignmentX(Label.CENTER);
-        countDialog.add(titleLabel, BorderLayout.NORTH);
-
-        JPanel centerPanel = new JPanel();
-        centerPanel.setBackground(Color.blue);
-        countDialog.add(centerPanel, BorderLayout.CENTER);
-
-        // 文件夹选择
-        JLabel folderLabel = new JLabel("path:");
-        folderLabel.setBounds(30, 60, 80, 25);
-        folderLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countDialog.add(folderLabel);
-
-        JTextField folderField = new JTextField(System.getProperty("user.dir"));
-        folderField.setBounds(120, 60, 250, 25);
-        folderField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countDialog.add(folderField);
-
-        // 浏览按钮（JButton）
         JButton browseBtn = new JButton("browse");
-        browseBtn.setBounds(380, 60, 60, 25);
         browseBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
-        browseBtn.setBackground(new Color(0, 0, 0));
-        browseBtn.setBorderPainted(false);
-        browseBtn.setFocusPainted(false);
         browseBtn.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
             int result = fileChooser.showOpenDialog(countDialog);
             if (result == JFileChooser.APPROVE_OPTION) {
-                folderField.setText(fileChooser.getSelectedFile().getAbsolutePath());
+                pathField.setText(fileChooser.getSelectedFile().getAbsolutePath());
             }
         });
-        countDialog.add(browseBtn);
+        gbc.gridx = 2;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        mainContent.add(browseBtn, gbc);
 
-        // 语言类型选择
-        JLabel langLabel = new JLabel("language:");
-        langLabel.setBounds(30, 110, 80, 25);
-        langLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countDialog.add(langLabel);
-
-        Map<String, String[]> langExtensions = new HashMap<>();
-        langExtensions.put("Java", new String[] { ".java" });
-        langExtensions.put("Python", new String[] { ".py" });
-        langExtensions.put("JavaScript", new String[] { ".js" });
-        langExtensions.put("All", new String[] { ".java", ".py", ".js", ".cpp", ".c", ".html", ".css" });
-
-        String[] languages = langExtensions.keySet().toArray(new String[0]);
-        JComboBox<String> langCombo = new JComboBox<>(languages);
-        langCombo.setBounds(120, 110, 120, 25);
-        langCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countDialog.add(langCombo);
-
-        // 选项复选框
-        JCheckBox emptyLineBox = new JCheckBox("count empty lines");
-        emptyLineBox.setBounds(30, 160, 120, 25);
-        emptyLineBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        emptyLineBox.setSelected(true);
-        countDialog.add(emptyLineBox);
-
-        JCheckBox commentBox = new JCheckBox("count comments");
-        commentBox.setBounds(180, 160, 120, 25);
-        commentBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        commentBox.setSelected(true);
-        countDialog.add(commentBox);
-
-        // 保存结果选项
-        JCheckBox saveToFileBox = new JCheckBox("save result to file");
-        saveToFileBox.setBounds(30, 190, 160, 25);
-        saveToFileBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countDialog.add(saveToFileBox);
-
-        // 格式选择
-        JLabel formatLabel = new JLabel("format:");
-        formatLabel.setBounds(200, 190, 60, 25);
-        formatLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countDialog.add(formatLabel);
-
-        String[] formats = new String[] { "csv", "json", "xlsx" };
-        JComboBox<String> formatCombo = new JComboBox<>(formats);
-        formatCombo.setBounds(260, 190, 80, 25);
-        formatCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countDialog.add(formatCombo);
-
-        // 保存路径输入
-        JTextField savePathField = new JTextField(System.getProperty("user.dir") + File.separator + "count_result.csv");
-        savePathField.setBounds(30, 220, 300, 25);
+        // save path
+        JTextArea savePathField = new JTextArea(System.getProperty("user.dir") + File.separator + "count_result.csv");
         savePathField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countDialog.add(savePathField);
-
+        savePathField.setLineWrap(true);
+        savePathField.setWrapStyleWord(true);
+        JScrollPane savePathScrollPane = new JScrollPane(savePathField);
+        savePathScrollPane.setPreferredSize(new Dimension(400, 25));
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.gridwidth = 2;
+        mainContent.add(savePathScrollPane, gbc);
         JButton browseSaveBtn = new JButton("save to");
-        browseSaveBtn.setBounds(340, 220, 100, 25);
         browseSaveBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
-        // browseSaveBtn.setBackground(new Color(0, 0, 0));
-        browseSaveBtn.setBorderPainted(false);
-        browseSaveBtn.setFocusPainted(false);
         browseSaveBtn.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setSelectedFile(new File(savePathField.getText()));
@@ -634,18 +607,18 @@ public class GameFrame extends Frame {
                 savePathField.setText(fileChooser.getSelectedFile().getAbsolutePath());
             }
         });
-        countDialog.add(browseSaveBtn);
-
-        // 统计按钮
+        gbc.gridx = 2;
+        gbc.gridy = 5;
+        gbc.gridwidth = 1;
+        mainContent.add(browseSaveBtn, gbc);
+        // count btn
         JButton countBtn = new JButton("start count");
-        countBtn.setBounds(170, 220, 120, 30);
         countBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countBtn.setForeground(Color.blue);
-        countBtn.setBorder(BorderFactory.createLineBorder(Color.blue, 1));
-        countBtn.setBorderPainted(false); // 现在有效
-        countBtn.setFocusPainted(false); // 现在有效
+        countBtn.setForeground(Color.BLACK);
+        countBtn.setBackground(new Color(66, 133, 244));
+
         countBtn.addActionListener(e -> {
-            String folderPath = folderField.getText().trim();
+            String folderPath = pathField.getText().trim();
             String language = (String) langCombo.getSelectedItem();
             boolean countEmpty = emptyLineBox.isSelected();
             boolean countComment = commentBox.isSelected();
@@ -661,7 +634,8 @@ public class GameFrame extends Frame {
             new Thread(() -> {
                 try {
                     String[] extensions = langExtensions.get(language);
-                    CodeLineCountResult result = countCodeLines(folder, extensions, countEmpty, countComment);
+                    CodeLineCountResult result = countCodeLines(folder, extensions, countEmpty,
+                            countComment);
 
                     // 显示统计结果
                     SwingUtilities.invokeLater(() -> {
@@ -712,19 +686,15 @@ public class GameFrame extends Frame {
                     SwingUtilities.invokeLater(() -> showTipDialog("统计失败：" + ex.getMessage()));
                 }
             }).start();
-
             countDialog.dispose();
         });
-        countDialog.add(countBtn, BorderLayout.SOUTH);
 
-        // 关闭事件
-        countDialog.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                countDialog.dispose();
-            }
-        });
-
+        gbc.gridx = 1;
+        gbc.gridy = 6;
+        gbc.gridwidth = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        mainContent.add(countBtn, gbc);
+        countDialog.add(mainContent, BorderLayout.CENTER);
         countDialog.setVisible(true);
     }
 
