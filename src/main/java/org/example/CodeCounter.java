@@ -157,6 +157,7 @@ class CodeStatisticsUI extends JFrame {
             }
         } catch (Exception ignored) {
             // 读取失败不抛出，跳过该文件
+
         }
     }
 
