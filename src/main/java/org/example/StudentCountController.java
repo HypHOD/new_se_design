@@ -2,9 +2,9 @@ package org.example;
 
 import java.sql.*;
 
-public class CountStuController {
+public class StudentCountController {
     private static final String DB_TYPE = "POSTGRES";
-    private static final String URL = "jdbc:postgresql://localhost:5432/test_db";
+    private static final String URL = "jdbc:postgresql://localhost:5432/student_management?currentSchema=public";
     private static final String USERNAME = "hods";
     private static final String PASSWORD = "123";
     private static final String DRIVER = "org.postgresql.Driver";
@@ -61,22 +61,22 @@ public class CountStuController {
         closeConnection(conn);
     }
 
-    void conndb() {
-        try {
-            conn = DriverManager.getConnection(URL, USERNAME, PASSWORD);
-            System.out.println("PostgreSQL connect success!");
+    // void conndb() {
+    // try {
+    // conn = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+    // System.out.println("PostgreSQL connect success!");
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (conn != null)
-                    conn.close();
-                System.out.println("connection closed!");
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
+    // } catch (SQLException e) {
+    // e.printStackTrace();
+    // } finally {
+    // try {
+    // if (conn != null)
+    // conn.close();
+    // System.out.println("connection closed!");
+    // } catch (SQLException e) {
+    // e.printStackTrace();
+    // }
+    // }
+    // }
 
 }
