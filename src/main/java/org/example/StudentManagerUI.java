@@ -1,8 +1,8 @@
 package org.example;
 
-import org.example.StudentCountController;
-import org.example.StudentRandomCount;
-import org.example.StudentQueryService;
+import org.example.StudentQueryController;
+import org.example.StudentRandomQuery;
+import org.example.StudentQueryAnalyze;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -16,8 +16,8 @@ import java.awt.event.ActionListener;
  */
 public class StudentManagerUI extends JFrame {
     // 1. 业务服务依赖（初始化后注入）
-    private StudentQueryService queryService;
-    private StudentRandomCount randomCountService;
+    private StudentQueryAnalyze queryService;
+    private StudentRandomQuery randomCountService;
 
     // 2. UI组件
     private JTable studentTable; // 学生数据展示表格
@@ -29,9 +29,9 @@ public class StudentManagerUI extends JFrame {
      */
     public StudentManagerUI() {
         // 初始化业务服务
-        StudentCountController dbController = new StudentCountController();
-        this.queryService = new StudentQueryService(dbController);
-        this.randomCountService = new StudentRandomCount(dbController);
+        StudentQueryController dbController = new StudentQueryController();
+        this.queryService = new StudentQueryAnalyze(dbController);
+        this.randomCountService = new StudentRandomQuery(dbController);
 
         // 初始化UI
         initUI();

@@ -12,9 +12,9 @@ import java.util.Random;
 /**
  * 随机统计学生子功能：负责所有随机相关的学生查询/统计业务
  */
-public class StudentRandomCount {
+public class StudentRandomQuery {
     // 依赖主控制器
-    private final StudentCountController dbController;
+    private final StudentQueryController dbController;
     // 随机数生成器（用于随机选年级、年龄段等）
     private final Random random;
 
@@ -22,7 +22,7 @@ public class StudentRandomCount {
     public static Integer absentCount = 0;
 
     // 构造函数：注入主控制器（必须传入，保证连接复用）
-    public StudentRandomCount(StudentCountController dbController) {
+    public StudentRandomQuery(StudentQueryController dbController) {
         this.dbController = dbController;
         this.random = new Random();
     }

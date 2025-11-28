@@ -2,7 +2,7 @@ package org.example;
 
 import java.sql.*;
 
-public class StudentCountController {
+public class StudentQueryController {
     private static final String DB_TYPE = "POSTGRES";
     private static final String URL = "jdbc:postgresql://localhost:5432/student_management?currentSchema=public";
     private static final String USERNAME = "hods";
