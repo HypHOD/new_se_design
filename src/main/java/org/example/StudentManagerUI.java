@@ -8,6 +8,8 @@ import org.example.StudentQueryAnalyze;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -332,8 +334,67 @@ public class StudentManagerUI extends JFrame {
     // 查询方法
 
     private void executeRandomQueryWithConditions(int minLateCount, int minAbsentCount, int queryCount) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'executeRandomQueryWithConditions'");
+
+        // 后台线程
+        new Thread(() -> {
+            try {
+                SwingUtilities.invokeLater(() -> {
+                    statusLabel.setText("正在执行条件随机查询");
+                    clearTableData();
+                });
+
+                // 执行查询
+                List<Student> randomList = randomQueryService.randomQueryStudent(minLateCount, minAbsentCount,
+                        queryCount);
+
+                // 更新ui
+                SwingUtilities.invokeLater(() -> {
+                    if (randomList != null && !randomList.isEmpty()) {
+                        for (Student student : randomList) {
+                            tableModel.addRow(new Object[] {
+                                    student.getStudent_id(),
+                                    student.getName(),
+                                    student.getAvatar_url(),
+                                    false
+                            });
+                        }
+                        // 输出查询结果
+                        String conditionDesc = buildConditionDescription(minLateCount, minAbsentCount, queryCount);
+                        statusLabel.setText(("随机查询成功:" + conditionDesc + ", 共" + randomList.size() + "人"));
+                    } else {
+                        statusLabel.setText("随机查询结束: 无符合条件学生");
+                        JOptionPane.showMessageDialog(
+                                StudentManagerUI.this,
+                                "没有找到符合条件的学生！",
+                                "提示",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    }
+                });
+            } catch (Exception e) {
+                System.err.println("查询出错:" + e);
+            }
+        }).start();
+    }
+
+    private String buildConditionDescription(int minLateCount, int minAbsentCount, int queryCount) {
+        // 用 StringBuilder 拼接字符串（效率高于直接 + 拼接，尤其条件多时）
+        StringBuilder desc = new StringBuilder();
+
+        // 1. 先拼接「数量限制」（必选条件，始终显示）
+        desc.append("数量限制").append(queryCount).append("人");
+
+        // 2. 拼接「迟到次数条件」（-1 表示不限制，不显示该条件）
+        if (minLateCount != -1) {
+            desc.append("，迟到次数>").append(minLateCount);
+        }
+
+        // 3. 拼接「缺课次数条件」（-1 表示不限制，不显示该条件）
+        if (minAbsentCount != -1) {
+            desc.append("，缺课次数>").append(minAbsentCount);
+        }
+
+        // 返回最终拼接的描述文本
+        return desc.toString();
     }
 
     public static void main(String[] args) {
