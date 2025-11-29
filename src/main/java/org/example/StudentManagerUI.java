@@ -344,7 +344,9 @@ public class StudentManagerUI extends JFrame {
                 });
 
                 // 执行查询
-                List<Student> randomList = randomQueryService.randomQueryStudent(minLateCount, minAbsentCount,
+                StudentQueryController dbController = new StudentQueryController();
+                StudentRandomQuery randomCount = new StudentRandomQuery(dbController);
+                List<Student> randomList = randomCount.randomQueryStudent(minLateCount, minAbsentCount,
                         queryCount);
 
                 // 更新ui
@@ -359,6 +361,7 @@ public class StudentManagerUI extends JFrame {
                             });
                         }
                         // 输出查询结果
+
                         String conditionDesc = buildConditionDescription(minLateCount, minAbsentCount, queryCount);
                         statusLabel.setText(("随机查询成功:" + conditionDesc + ", 共" + randomList.size() + "人"));
                     } else {
