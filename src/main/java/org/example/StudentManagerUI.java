@@ -8,6 +8,7 @@ import org.example.StudentQueryAnalyze;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.Comparator;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -153,7 +155,9 @@ public class StudentManagerUI extends JFrame {
         orderDialog.setLocationRelativeTo(this);
 
         // 界面
-        List<Student> orderStudentsList = Collections.emptyList();
+        // List<Student> orderStudentsList = Collections.emptyList();
+        final AtomicReference<List<Student>> orderStudentsList = new AtomicReference<List<Student>>(
+                Collections.emptyList());
         int[] currentIndex = { 0 };
         Map<Long, Boolean> presentStatusMap = new HashMap<>();
 
@@ -178,7 +182,7 @@ public class StudentManagerUI extends JFrame {
         avatarValueLabel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
 
         JLabel presentLabel = new JLabel("签到: ");
-        JCheckBox prestenCheckBox = new JCheckBox();
+        JCheckBox presentCheckBox = new JCheckBox();
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 40, 15));
         JButton prevBtn = createFunctionButton("上一个");
@@ -210,7 +214,7 @@ public class StudentManagerUI extends JFrame {
         gbc.gridy = 3;
         infoPanel.add(presentLabel, gbc);
         gbc.gridx = 1;
-        infoPanel.add(prestenCheckBox, gbc);
+        infoPanel.add(presentCheckBox, gbc);
 
         orderDialog.add(progressLabel, BorderLayout.NORTH);
         orderDialog.add(infoPanel, BorderLayout.CENTER);
@@ -220,28 +224,148 @@ public class StudentManagerUI extends JFrame {
         btnPanel.add(finishBtn);
 
         Runnable updateStudentInfo = () -> {
-            if (orderStudentsList.isEmpty())
+            if (orderStudentsList.get().isEmpty())
                 return;
 
-            Student currentStudent = orderStudentsList.get(currentIndex[0]);
-            long studentId = currentStudent.getStudent_id();
+            Student currentStudent = orderStudentsList.get().get(currentIndex[0]);
+            int studentId = currentStudent.getStudent_id();
 
             idValueLabel.setText(String.valueOf(studentId));
             nameValueLabel.setText(currentStudent.getName());
             loadStudentAvatar(currentStudent.getAvatar_url(), avatarValueLabel);
 
-            prestenCheckBox.setSelected(presentStatusMap.getOrDefault(studentId, false));
+            presentCheckBox.setSelected(presentStatusMap.getOrDefault(studentId, false));
             // 更新进度显示
-            progressLabel.setText(String.format("顺序点名: 第%d/%d名学生", currentIndex[0] + 1, orderStudentsList.size()));
+            progressLabel
+                    .setText(String.format("顺序点名: 第%d/%d名学生", currentIndex[0] + 1, orderStudentsList.get().size()));
 
             prevBtn.setEnabled(currentIndex[0] > 0);
-            nextBtn.setEnabled(currentIndex[0] < orderStudentsList.size() - 1);
+            nextBtn.setEnabled(currentIndex[0] < orderStudentsList.get().size() - 1);
         };
 
         // 按钮事件绑定
+        prevBtn.addActionListener(e -> {
+            if (currentIndex[0] <= 0) {
+                return;
+            }
+            Student currentStudent = orderStudentsList.get().get(currentIndex[0]);
+            presentStatusMap.put(Long.valueOf(currentStudent.getStudent_id()), presentCheckBox.isSelected());
+
+            currentIndex[0]--;
+            updateStudentInfo.run();
+        });
+
+        nextBtn.addActionListener(e -> {
+            if (currentIndex[0] >= orderStudentsList.get().size() - 1) {
+                Student currentStudent = orderStudentsList.get().get(currentIndex[0]);
+                presentStatusMap.put(Long.valueOf(currentStudent.getStudent_id()), presentCheckBox.isSelected());
+
+                // 切换到下一个学生
+                currentIndex[0]++;
+                updateStudentInfo.run();
+            }
+        });
+
+        finishBtn.addActionListener(e -> {
+            if (!orderStudentsList.get().isEmpty()) {
+                Student currentStudent = orderStudentsList.get().get(currentIndex[0]);
+                presentStatusMap.put(Long.valueOf(currentStudent.getStudent_id()), presentCheckBox.isSelected());
+
+                // 统计到场人数
+                long presentCount = presentStatusMap.values().stream()
+                        .filter(Boolean::booleanValue)
+                        .count();
+
+                // 更新主界面状态
+                SwingUtilities.invokeLater(() -> statusLabel.setText(String.format("顺序点名结束：共%d名学生，到场%d人",
+                        orderStudentsList.get().size(), presentCount)));
+            }
+            orderDialog.dispose();
+        });
+
+        // 后台加载数据
+        new Thread(() -> {
+            try {
+                // todo 使用查询到的tableModel的数据加载
+                List<Student> studentsList = extractStudentsFromTableModel();
+                if (studentsList.isEmpty()) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(orderDialog,
+                                "请先通过前两项查询学生",
+                                "无数据提示",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        orderDialog.dispose();
+                        statusLabel.setText("请先查询学生再点名");
+                    });
+                    return;
+                }
+                // 按照ID升序
+                Collections.sort(studentsList, Comparator.comparingInt(Student::getStudent_id));
+
+                // 初始化点名状态
+                presentStatusMap.clear();
+                for (Student student : studentsList) {
+                    presentStatusMap.put(Long.valueOf(student.getStudent_id()), false);
+                }
+                // 更新全局变量
+                // orderStudentsList = studentsList;
+                orderStudentsList.set(studentsList);
+                currentIndex[0] = 0;
+                SwingUtilities.invokeLater(() -> {
+                    updateStudentInfo.run();
+                    statusLabel.setText(String.format("顺序点名, 共%d名学生", studentsList.size()));
+                });
+
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(orderDialog,
+                            "加载点名数据失败：" + e.getMessage(),
+                            "错误提示",
+                            JOptionPane.ERROR_MESSAGE);
+                    orderDialog.dispose();
+                    statusLabel.setText("就绪：数据加载失败，请重试");
+                });
+                e.printStackTrace();
+            }
+
+        }).start();
 
         orderDialog.setVisible(true);
 
+    }
+
+    private List<Student> extractStudentsFromTableModel() {
+        List<Student> studentList = new ArrayList<>();
+        int rowCount = tableModel.getRowCount();
+
+        // 遍历tableModel的每一行，转换为Student对象
+        for (int row = 0; row < rowCount; row++) {
+            try {
+                // 从表格列中提取数据（列索引对应：0=ID，1=姓名，2=照片URL，3=是否到场）
+                int studentId = Integer.parseInt(tableModel.getValueAt(row, 0).toString().trim());
+                String name = tableModel.getValueAt(row, 1) == null ? "未知姓名"
+                        : tableModel.getValueAt(row, 1).toString().trim();
+                String avatarUrl = tableModel.getValueAt(row, 2) == null ? ""
+                        : tableModel.getValueAt(row, 2).toString().trim();
+
+                // 构造Student对象（如果Student类需要迟到/缺课次数，可设为默认值0，不影响点名功能）
+                Student student = new Student();
+                student.setStudent_id(studentId);
+                student.setName(name);
+                student.setAvatar_url(avatarUrl);
+                // 若Student类有late_count/absent_count字段，补充默认值（根据实际类结构调整）
+                // student.setLate_count(0);
+                // student.setAbsent_count(0);
+
+                studentList.add(student);
+            } catch (Exception e) {
+                // 跳过数据格式错误的行，不影响整体点名功能
+                System.err.println("跳过无效学生数据（行号：" + (row + 1) + "）：" + e.getMessage());
+                continue;
+            }
+        }
+
+        return studentList;
     }
 
     private void loadStudentAvatar(String avatarUrl, JLabel targetJLabel) {
