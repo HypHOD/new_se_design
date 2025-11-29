@@ -264,6 +264,11 @@ public class StudentManagerUI extends JFrame {
                 // 切换到下一个学生
                 currentIndex[0]++;
                 updateStudentInfo.run();
+
+                // 语音点到
+                Student speakStudent = orderStudentsList.get().get(currentIndex[0]);
+                speakQuery(speakStudent.getName());
+
             }
         });
 
