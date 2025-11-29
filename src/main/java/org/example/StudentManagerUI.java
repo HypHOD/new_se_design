@@ -256,7 +256,7 @@ public class StudentManagerUI extends JFrame {
         });
 
         nextBtn.addActionListener(e -> {
-            if (currentIndex[0] >= orderStudentsList.get().size() - 1) {
+            if (currentIndex[0] < orderStudentsList.get().size() - 1) {
                 Student currentStudent = orderStudentsList.get().get(currentIndex[0]);
                 presentStatusMap.put(Long.valueOf(currentStudent.getStudent_id()), presentCheckBox.isSelected());
 
@@ -276,7 +276,30 @@ public class StudentManagerUI extends JFrame {
                         .filter(Boolean::booleanValue)
                         .count();
 
-                // 更新主界面状态
+                SwingUtilities.invokeLater(() -> {
+                    // 遍历主界面表格的所有行，同步签到状态
+                    for (int row = 0; row < tableModel.getRowCount(); row++) {
+                        try {
+                            // 1. 提取表格当前行的学生ID（转为Long，匹配presentStatusMap的key）
+                            int tableStudentId = Integer.parseInt(tableModel.getValueAt(row, 0).toString().trim());
+                            Long studentIdKey = Long.valueOf(tableStudentId);
+
+                            // 2. 从Map中获取签到状态（无记录则默认未到场）
+                            boolean isPresent = presentStatusMap.getOrDefault(studentIdKey, false);
+
+                            // 3. 更新表格第3列（「是否到场」列，索引为3）
+                            tableModel.setValueAt(isPresent, row, 3);
+                        } catch (Exception ex) {
+                            // 跳过无效数据行，不影响整体更新
+                            System.err.println("跳过表格中无效数据行（行号：" + (row + 1) + "）：" + ex.getMessage());
+                            continue;
+                        }
+                    }
+                    // 4. 通知表格数据变化，强制刷新显示
+                    tableModel.fireTableDataChanged();
+                });
+
+                // 更新主界面状态提示
                 SwingUtilities.invokeLater(() -> statusLabel.setText(String.format("顺序点名结束：共%d名学生，到场%d人",
                         orderStudentsList.get().size(), presentCount)));
             }
