@@ -3,6 +3,7 @@ package org.example;
 import org.example.StudentQueryController;
 import org.example.StudentRandomQuery;
 import org.example.StudentRandomQuery.Student;
+import org.apache.logging.log4j.util.InternalException;
 import org.example.StudentQueryAnalyze;
 
 import javax.swing.*;
@@ -731,6 +732,39 @@ public class StudentManagerUI extends JFrame {
 
         // 返回最终拼接的描述文本
         return desc.toString();
+    }
+
+    // 语音播报点到
+    private void speakQuery(String text) {
+        String speakText = text == null || text.trim().isEmpty() ? "未知" : text.trim();
+
+        new Thread(() -> {
+            ProcessBuilder pb = null;
+            String os = System.getProperty("os.name").toLowerCase();
+            try {
+                if (os.contains("win")) {
+                    pb = new ProcessBuilder(
+                            "powershell",
+                            "-Command",
+                            "Add-Type -AssemblyName System.Speech; " +
+                                    "$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer; " +
+                                    "$speak.Speak('" + speakText + "');");
+                } else if (os.contains("mac")) {
+                    pb = new ProcessBuilder("say", speakText);
+                } else if (os.contains("linux")) {
+                    pb = new ProcessBuilder("espeak", speakText);
+                } else {
+                    System.err.println("不支持的系统");
+                    return;
+                }
+                pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                pb.start().waitFor(); // 等待播报完成（不影响UI）
+            } catch (IOException | InterruptedException e) {
+                System.err.println("语音播报失败: " + e.getMessage());
+            }
+
+        }).start();
     }
 
     public static void main(String[] args) {
