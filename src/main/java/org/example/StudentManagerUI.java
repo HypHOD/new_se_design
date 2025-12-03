@@ -671,6 +671,12 @@ public class StudentManagerUI extends JFrame {
     }
 
     // 查询方法
+    /**
+     * 
+     * @param minLateCount
+     * @param minAbsentCount
+     * @param queryCount
+     */
 
     private void executeRandomQueryWithConditions(int minLateCount, int minAbsentCount, int queryCount) {
 
@@ -718,6 +724,13 @@ public class StudentManagerUI extends JFrame {
         }).start();
     }
 
+    /**
+     * 
+     * @param minLateCount
+     * @param minAbsentCount
+     * @param queryCount
+     * @return
+     */
     private String buildConditionDescription(int minLateCount, int minAbsentCount, int queryCount) {
         // 用 StringBuilder 拼接字符串（效率高于直接 + 拼接，尤其条件多时）
         StringBuilder desc = new StringBuilder();
