@@ -8,6 +8,8 @@ import org.example.StudentQueryAnalyze;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -89,9 +91,24 @@ public class StudentManagerUI extends JFrame {
 
         // ---------------------- 中间表格展示区域 ----------------------
         // 表格列名
-        String[] columnNames = { "ID", "姓名", "照片", "是否到场" };
+        String[] columnNames = { "ID", "姓名", "照片", "是否到场", "补签" };
         // 表格数据模型（空数据初始化）
-        tableModel = new DefaultTableModel(null, columnNames);
+        tableModel = new DefaultTableModel(null, columnNames) {
+            // 指定可编辑列
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 4;
+            }
+
+            // 指定补签列按钮
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 4) {
+                    return JButton.class; // 补签列是按钮类型
+                }
+                return super.getColumnClass(columnIndex);
+            }
+        };
         // 创建表格（禁止编辑）
         studentTable = new JTable(tableModel);
         studentTable.setDefaultEditor(Object.class, null); // 禁止表格单元格编辑
@@ -108,6 +125,17 @@ public class StudentManagerUI extends JFrame {
         statusLabel = new JLabel("就绪：请点击上方功能按钮");
         statusLabel.setFont(new Font("宋体", Font.PLAIN, 11));
         statusPanel.add(statusLabel);
+
+        // 设置列宽
+        studentTable.getColumnModel().getColumn(0).setPreferredWidth(60); // ID列
+        studentTable.getColumnModel().getColumn(1).setPreferredWidth(80); // 姓名列
+        studentTable.getColumnModel().getColumn(2).setPreferredWidth(120); // 照片列
+        studentTable.getColumnModel().getColumn(3).setPreferredWidth(80); // 是否到场列
+        studentTable.getColumnModel().getColumn(4).setPreferredWidth(80); // 补签按钮列
+
+        // 补签按钮渲染
+        studentTable.getColumnModel().getColumn(4).setCellRenderer(new ButtonRenderer());
+        studentTable.getColumnModel().getColumn(4).setCellEditor(new ButtonEditor(new JCheckBox()));
 
         // ---------------------- 组装窗口 ----------------------
         add(buttonPanel, BorderLayout.NORTH); // 顶部按钮面板
@@ -783,6 +811,127 @@ public class StudentManagerUI extends JFrame {
             }
 
         }).start();
+    }
+
+    // 编辑补签按钮
+    // ---------------------- 补签按钮相关自定义组件 ----------------------
+    /**
+     * 按钮渲染器：用于在表格中显示按钮
+     */
+    class ButtonRenderer extends JButton implements TableCellRenderer {
+        public ButtonRenderer() {
+            setOpaque(true);
+            setFont(new Font("宋体", Font.PLAIN, 11));
+            setBackground(new Color(100, 149, 237));
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            // 设置按钮文本
+            setText((value == null) ? "" : value.toString());
+
+            // 根据"是否到场"状态设置按钮是否可用
+            boolean isPresent = (boolean) table.getValueAt(row, 3);
+            setEnabled(!isPresent); // 未到场时可用，已到场时禁用
+
+            // 禁用时改变按钮样式
+            if (!isEnabled()) {
+                setBackground(Color.LIGHT_GRAY);
+                setText("已签到");
+            } else {
+                setBackground(new Color(100, 149, 237));
+                setText("补签");
+            }
+
+            return this;
+        }
+    }
+
+    /**
+     * 按钮编辑器：用于处理按钮点击事件
+     */
+    class ButtonEditor extends DefaultCellEditor {
+        private JButton button;
+        private String label;
+        private boolean isPushed;
+        private int currentRow;
+
+        public ButtonEditor(JCheckBox checkBox) {
+            super(checkBox);
+            button = new JButton();
+            button.setOpaque(true);
+            button.setFont(new Font("宋体", Font.PLAIN, 11));
+
+            // 按钮点击事件
+            button.addActionListener(e -> {
+                fireEditingStopped(); // 停止编辑
+                if (isPushed) {
+                    // 执行补签操作
+                    doSupplementSign();
+                }
+                isPushed = false;
+            });
+        }
+
+        /**
+         * 执行补签操作
+         */
+        private void doSupplementSign() {
+            // 更新"是否到场"状态为true
+            tableModel.setValueAt(true, currentRow, 3);
+            // 刷新补签按钮状态
+            tableModel.fireTableCellUpdated(currentRow, 4);
+
+            // 提示补签成功
+            String studentName = tableModel.getValueAt(currentRow, 1).toString();
+            statusLabel.setText("已为学生【" + studentName + "】完成补签");
+
+            // 语音提示
+            speakQuery(studentName + "补签成功");
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                boolean isSelected, int row, int column) {
+            currentRow = row;
+            label = (value == null) ? "" : value.toString();
+            button.setText(label);
+
+            // 根据"是否到场"状态设置按钮可用性
+            boolean isPresent = (boolean) table.getValueAt(row, 3);
+            button.setEnabled(!isPresent);
+
+            if (!button.isEnabled()) {
+                button.setBackground(Color.LIGHT_GRAY);
+                button.setText("已签到");
+            } else {
+                button.setText("补签");
+            }
+
+            isPushed = true;
+            return button;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            if (isPushed) {
+                // 按钮点击后返回新的文本
+                return "已签到";
+            }
+            return label;
+        }
+
+        @Override
+        public boolean stopCellEditing() {
+            isPushed = false;
+            return super.stopCellEditing();
+        }
+
+        @Override
+        protected void fireEditingStopped() {
+            super.fireEditingStopped();
+        }
     }
 
     public static void main(String[] args) {
