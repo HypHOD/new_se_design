@@ -154,7 +154,7 @@ public class StudentManagerUI extends JFrame {
     // 绑定按钮点击事件
     private void bindButtonEvents(JButton btnQueryAll, JButton btnRandomQuery, JButton btnQueryInOrder,
             JButton btnAnalize) {
-        btnQueryAll.addActionListener(e -> queryAllStudents());
+        btnQueryAll.addActionListener(e -> createQueryAllStudentsWindow());
 
         btnRandomQuery.addActionListener(e -> createRandomQueryWindow());
 
@@ -164,8 +164,54 @@ public class StudentManagerUI extends JFrame {
 
     }
 
-    private Object queryAllStudents() {
+    private Object createQueryAllStudentsWindow() {
+
+        SwingUtilities.invokeLater(() -> {
+            statusLabel.setText("正在查询全部学生数据...");
+        });
         new Thread(() -> {
+            try {
+                List<Student> allStudents = queryService.getAllStudentsWithStats();
+                // 更新主页表格
+                SwingUtilities.invokeLater(() -> {
+                    clearTableData();
+                    if (allStudents != null && !allStudents.isEmpty()) {
+                        for (Student student : allStudents) {
+                            tableModel.addRow(new Object[] {
+                                    student.getStudent_id(),
+                                    student.getName(),
+                                    student.getAvatar_url(),
+                                    false
+                            });
+                        }
+                        statusLabel.setText("查询成功：共加载 " + allStudents.size() + " 名学生数据");
+                    } else {
+                        statusLabel.setText("查询结果: 无记录");
+                        JOptionPane.showMessageDialog(StudentManagerUI.this, "数据库无数据", "提示",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    }
+                });
+            } catch (Exception e) {
+                // 异常处理
+                SwingUtilities.invokeLater(() -> {
+                    statusLabel.setText("查询失败：" + e.getMessage());
+                    JOptionPane.showMessageDialog(
+                            StudentManagerUI.this,
+                            "查询所有学生失败：" + e.getMessage(),
+                            "错误",
+                            JOptionPane.ERROR_MESSAGE);
+                    // 恢复按钮可用
+                    // btnQueryAll.setEnabled(true);
+                });
+                e.printStackTrace();
+
+            }
+        }).start();
+        // 读取所有学生写入列表
+
+        new Thread(() ->
+
+        {
 
         }).start();
         // TODO Auto-generated method stub
@@ -278,8 +324,6 @@ public class StudentManagerUI extends JFrame {
         analyzeDialog.add(topPanel, BorderLayout.NORTH);
         analyzeDialog.add(tableScrollPane, BorderLayout.CENTER);
         analyzeDialog.add(bottomPanel, BorderLayout.SOUTH);
-
-        // 数据模型
 
         // 数据容器
         List<StudentAnalysisData> originalStudentData = new ArrayList<>();
@@ -428,9 +472,6 @@ public class StudentManagerUI extends JFrame {
 
         // 显示窗口
         analyzeDialog.setVisible(true);
-
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'queryAllStudents'");
 
     }
 
@@ -861,6 +902,7 @@ public class StudentManagerUI extends JFrame {
         randomDialog.setSize(400, 280);
         randomDialog.setLayout(new BorderLayout(15, 15));
         randomDialog.setResizable(false);
+        randomDialog.setLocationRelativeTo(this);
 
         // 输入选择信息
         JPanel inputJPanel = new JPanel(new GridBagLayout());
