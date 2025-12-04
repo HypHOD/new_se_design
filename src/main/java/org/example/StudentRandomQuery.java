@@ -44,7 +44,7 @@ public class StudentRandomQuery {
             conn = dbController.getConnection();
             System.out.printf("开始查询迟到次数大于%d , 缺课次数大于%d的 %d 名学生%n", lateCount, absentCount, limit);
 
-            // todo PostgreSQL查询指定学生
+            // PostgreSQL查询指定学生
             StringBuilder sqlBuilder = new StringBuilder();
             sqlBuilder.append("SELECT student_id, name, avatar_url, absence, late ")
                     .append("FROM students ")

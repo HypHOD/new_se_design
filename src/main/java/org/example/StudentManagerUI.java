@@ -20,6 +20,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 import java.util.Comparator;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -158,7 +160,7 @@ public class StudentManagerUI extends JFrame {
 
         btnQueryInOrder.addActionListener(e -> createQueryInOrderWindow());
 
-        btnAnalize.addActionListener(e -> analizeQueriedStudents());
+        btnAnalize.addActionListener(e -> createAnalizeQueriedStudentsWindow());
 
     }
 
@@ -170,9 +172,391 @@ public class StudentManagerUI extends JFrame {
         throw new UnsupportedOperationException("Unimplemented method 'queryAllStudents'");
     }
 
-    protected void analizeQueriedStudents() {
+    protected void createAnalizeQueriedStudentsWindow() {
+        // todo 新建窗口, 显示本班所有学生, 增加筛选条件: 本次参与点名的学生
+        // 允许对学生列表按照id、姓名、迟到次数、缺课次数排序
+        // 根据本次点到的结果对学生迟到缺课次数做出修改
+        // 增加结束签到按钮, 点击后将变化数据写回数据库
+
+        // 创建窗口
+        JDialog analyzeDialog = new JDialog(this, "学生点名统计分析", true);
+        analyzeDialog.setSize(850, 600);
+        analyzeDialog.setLayout(new BorderLayout(10, 10));
+        analyzeDialog.setResizable(false);
+        analyzeDialog.setLocationRelativeTo(this);
+
+        // 顶部筛选排序功能
+        JPanel topPanel = new JPanel(new BorderLayout(15, 10));
+        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 5, 15));
+
+        // 筛选条件面板left
+        JPanel filiterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 10));
+        filiterPanel.setBorder(BorderFactory.createTitledBorder("筛选条件"));
+        JLabel filliterLabel = new JLabel("显示学生:");
+        JComboBox<String> filiterComboBox = new JComboBox<>(new String[] { "全部学生", "仅参与点名学生" });
+        filiterComboBox.setPreferredSize(new Dimension(150, 25));
+
+        filiterPanel.add(filliterLabel);
+        filiterPanel.add(filiterComboBox);
+
+        // 筛选条件面板right
+        JPanel sortPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 10));
+        sortPanel.setBorder(BorderFactory.createTitledBorder("排序方式"));
+        JLabel sortLabel = new JLabel("选择排序条件:");
+        JComboBox<String> sortFieldComboBox = new JComboBox<>(new String[] { "ID", "姓名", "缺课次数", "迟到次数" });
+        JComboBox<String> sortOrderComboBox = new JComboBox<>(new String[] { "升序", "降序" });
+        JButton sortBtn = createSmallButton("执行排序");
+
+        sortFieldComboBox.setPreferredSize(new Dimension(100, 25));
+        sortOrderComboBox.setPreferredSize(new Dimension(80, 25));
+
+        sortPanel.add(sortLabel);
+        sortPanel.add(sortFieldComboBox);
+        sortPanel.add(sortOrderComboBox);
+        sortPanel.add(sortBtn);
+
+        topPanel.add(filiterPanel, BorderLayout.WEST);
+        topPanel.add(sortPanel, BorderLayout.EAST);
+
+        // 表格展示 center
+
+        String[] columnNames = { "ID", "NAME", "LATE", "ABSENT", "本次签到" };
+        DefaultTableModel analyzeTableModel = new DefaultTableModel(null, columnNames) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 2 || column == 3;
+            }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 2 || columnIndex == 3) {
+                    return Integer.class; // 次数列是整数类型
+                } else if (columnIndex == 4) {
+                    return String.class; // 点名状态是字符串
+                }
+                return super.getColumnClass(columnIndex);
+            }
+        };
+        JTable analyzeTable = new JTable(analyzeTableModel);
+        analyzeTable.setRowHeight(25);
+        analyzeTable.setDefaultEditor(String.class, null);
+
+        analyzeTable.getColumnModel().getColumn(0).setPreferredWidth(60);
+        analyzeTable.getColumnModel().getColumn(1).setPreferredWidth(80);
+        analyzeTable.getColumnModel().getColumn(2).setPreferredWidth(100);
+        analyzeTable.getColumnModel().getColumn(3).setPreferredWidth(100);
+        analyzeTable.getColumnModel().getColumn(4).setPreferredWidth(120);
+
+        JScrollPane tableScrollPane = new JScrollPane(analyzeTable);
+
+        // 统计信息和按钮区域 bottom
+        JPanel bottomPanel = new JPanel(new BorderLayout(15, 10));
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(5, 15, 10, 15));
+
+        // 统计信息标签
+        JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 5));
+        JLabel totalStatsLabel = new JLabel("总学生数：0 人");
+        JLabel lateStatsLabel = new JLabel("累计迟到：0 人次");
+        JLabel absentStatsLabel = new JLabel("累计缺课：0 人次");
+        statsPanel.add(totalStatsLabel);
+        statsPanel.add(lateStatsLabel);
+        statsPanel.add(absentStatsLabel);
+
+        // 功能按钮
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 5));
+        JButton saveBtn = createFunctionButton("保存修改");
+        JButton resetBtn = createFunctionButton("重置数据");
+        JButton closeBtn = createFunctionButton("关闭窗口");
+        btnPanel.add(saveBtn);
+        btnPanel.add(resetBtn);
+        btnPanel.add(closeBtn);
+
+        bottomPanel.add(statsPanel, BorderLayout.WEST);
+        bottomPanel.add(btnPanel, BorderLayout.EAST);
+
+        // 组装窗口
+        analyzeDialog.add(topPanel, BorderLayout.NORTH);
+        analyzeDialog.add(tableScrollPane, BorderLayout.CENTER);
+        analyzeDialog.add(bottomPanel, BorderLayout.SOUTH);
+
+        // 数据模型
+
+        // 数据容器
+        List<StudentAnalysisData> originalStudentData = new ArrayList<>();
+        Map<Integer, Boolean> presentStatusMap = new HashMap<>();
+
+        // 加载数据
+        new Thread(() -> {
+            try {
+                List<Student> tableStudents = extractStudentsFromTableModel();
+                if (tableStudents.isEmpty()) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(analyzeDialog, "请先查询学生并完成点名", "无数据提示",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        analyzeDialog.dispose();
+                        statusLabel.setText("统计分析失败：无学生数据");
+                    });
+                    return;
+                }
+
+                // 提取点名结果
+                for (int row = 0; row < tableModel.getRowCount(); row++) {
+                    try {
+                        int studentId = Integer.parseInt(tableModel.getValueAt(row, 0).toString().trim());
+                        boolean isPresent = (boolean) tableModel.getValueAt(row, 3);
+                        presentStatusMap.put(studentId, isPresent);
+                    } catch (Exception e) {
+                        System.err.println("提取点名状态失败（行号：" + (row + 1) + "）：" + e.getMessage());
+                    }
+                }
+                // 从数据库查询全部学生
+                List<Student> fullStudentList = queryService.getAllStudentsWithStats();
+                for (Student dbStudent : fullStudentList) {
+                    int student_id = dbStudent.getStudent_id();
+                    boolean isPresent = presentStatusMap.getOrDefault(student_id, false);
+                    boolean isLate = presentStatusMap.getOrDefault(student_id, false);
+                    StudentAnalysisData analysisData = new StudentAnalysisData(
+                            student_id,
+                            dbStudent.getName(),
+                            dbStudent.getLate(),
+                            dbStudent.getAbsence(),
+                            isPresent,
+                            isLate);
+                    originalStudentData.add(analysisData);
+                }
+                // 初始化表格
+                SwingUtilities.invokeLater(() -> {
+                    updateAnalyzeTable(originalStudentData, analyzeTableModel,
+                            filiterComboBox.getSelectedItem().toString());
+                    updateStatsInfo(originalStudentData, totalStatsLabel, lateStatsLabel, absentStatsLabel);
+
+                });
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(analyzeDialog, "数据加载失败：" + e.getMessage(), "错误提示",
+                            JOptionPane.ERROR_MESSAGE);
+                    analyzeDialog.dispose();
+                    statusLabel.setText("统计分析失败：" + e.getMessage());
+                });
+                e.printStackTrace();
+            }
+        }).start();
+
+        // 更新筛选条件
+        filiterComboBox.addActionListener(e -> {
+            String filter = filiterComboBox.getSelectedItem().toString();
+            updateAnalyzeTable(originalStudentData, analyzeTableModel, filter);
+        });
+
+        // 排序按钮
+        sortBtn.addActionListener(e -> {
+            String sortField = sortFieldComboBox.getSelectedItem().toString();
+            String sortOrder = sortOrderComboBox.getSelectedItem().toString();
+            sortStudentData(originalStudentData, analyzeTableModel, sortField, sortOrder,
+                    filiterComboBox.getSelectedItem().toString());
+
+        });
+
+        // 保存签到结果,写回数据库
+        saveBtn.addActionListener(e -> {
+            // 收集表格数据
+            List<StudentAnalysisData> modifiedData = new ArrayList<>();
+            for (int row = 0; row < analyzeTableModel.getRowCount(); row++) {
+                try {
+                    int studentId = Integer.parseInt(analyzeTableModel.getValueAt(row, 0).toString().trim());
+                    String name = analyzeTableModel.getValueAt(row, 1).toString().trim();
+                    int lateCount = Integer.parseInt(analyzeTableModel.getValueAt(row, 2).toString().trim());
+                    int absentCount = Integer.parseInt(analyzeTableModel.getValueAt(row, 3).toString().trim());
+
+                    // 找到原始数据并更新
+                    for (StudentAnalysisData original : originalStudentData) {
+                        if (original.getStudentId() == studentId) {
+                            original.setLateCount(lateCount);
+                            original.setAbsentCount(absentCount);
+                            modifiedData.add(original);
+                            break;
+                        }
+                    }
+                } catch (Exception ex) {
+                    System.err.println("收集修改数据失败（行号：" + (row + 1) + "）：" + ex.getMessage());
+                }
+            }
+            // 后台保存到数据库
+            new Thread(() -> {
+                try {
+                    boolean saveSuccess = queryService.updateStudentStats(modifiedData.stream()
+                            .map(data -> {
+                                Student student = new Student();
+                                student.setStudent_id(data.getStudentId());
+                                student.setName(data.getName());
+                                student.setLate(data.getLateCount());
+                                student.setAbsence(data.getAbsentCount());
+                                return student;
+                            })
+                            .collect(Collectors.toList()));
+
+                    SwingUtilities.invokeLater(() -> {
+                        if (saveSuccess) {
+                            JOptionPane.showMessageDialog(analyzeDialog, "学生统计数据已成功保存到数据库", "保存成功",
+                                    JOptionPane.INFORMATION_MESSAGE);
+                            statusLabel.setText("统计数据保存成功：共更新 " + modifiedData.size() + " 名学生信息");
+                        } else {
+                            JOptionPane.showMessageDialog(analyzeDialog, "数据保存失败，请重试", "保存失败",
+                                    JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+                } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(analyzeDialog, "保存异常：" + ex.getMessage(), "错误提示",
+                                JOptionPane.ERROR_MESSAGE);
+                    });
+                    ex.printStackTrace();
+                }
+            }).start();
+
+        });
+
+        // 重置数据
+        resetBtn.addActionListener(e -> {
+            String filter = filiterComboBox.getSelectedItem().toString();
+            updateAnalyzeTable(originalStudentData, analyzeTableModel, filter);
+            JOptionPane.showMessageDialog(analyzeDialog, "重制数据为初始状态");
+        });
+
+        // 关闭窗口
+        closeBtn.addActionListener(e -> analyzeDialog.dispose());
+
+        // 显示窗口
+        analyzeDialog.setVisible(true);
+
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'analizeQueriedStudents'");
+        throw new UnsupportedOperationException("Unimplemented method 'queryAllStudents'");
+
+    }
+
+    // 辅助类
+    public class StudentAnalysisData {
+        private int student_id;
+        private String name;
+        private int lateCount;
+        private int absentCount;
+        private boolean isPresent;
+        private boolean isLate;
+
+        public StudentAnalysisData(int id, String name, int late, int absent, boolean isPresent, boolean isLate) {
+            this.student_id = id;
+            this.name = name;
+            this.lateCount = late;
+            this.absentCount = absent;
+            this.isPresent = isPresent;
+            this.isLate = isLate;
+        }
+
+        public int getStudentId() {
+            return student_id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getLateCount() {
+            return lateCount;
+        }
+
+        public void setLateCount(int lateCount) {
+            this.lateCount = lateCount;
+        }
+
+        public int getAbsentCount() {
+            return absentCount;
+        }
+
+        public void setAbsentCount(int absentCount) {
+            this.absentCount = absentCount;
+        }
+
+        public boolean isPresent() {
+            return isPresent;
+        }
+
+        public boolean isLate() {
+            return isLate;
+        }
+
+    }
+
+    // 辅助函数 排序
+    private void sortStudentData(List<StudentAnalysisData> dataList, DefaultTableModel tableModel, String sortField,
+            String sortOrder, String filter) {
+        List<StudentAnalysisData> sortedList = new ArrayList<>(dataList);
+
+        // 定义比较器
+        Comparator<StudentAnalysisData> comparator = null;
+        switch (sortField) {
+            case "ID":
+                comparator = Comparator.comparingInt(StudentAnalysisData::getStudentId);
+                break;
+            case "姓名":
+                comparator = Comparator.comparing(StudentAnalysisData::getName);
+                break;
+            case "迟到次数":
+                comparator = Comparator.comparingInt(StudentAnalysisData::getLateCount);
+                break;
+            case "缺课次数":
+                comparator = Comparator.comparingInt(StudentAnalysisData::getAbsentCount);
+                break;
+        }
+        // 处理降序
+        if ("降序".equals(sortOrder) && comparator != null) {
+            comparator = comparator.reversed();
+        }
+
+        // 执行排序并更新表格
+        if (comparator != null) {
+            sortedList.sort(comparator);
+            updateAnalyzeTable(sortedList, tableModel, filter);
+        }
+    }
+
+    // 辅助函数 更行状态信息
+    private void updateStatsInfo(List<StudentAnalysisData> dataList, JLabel totalLabel,
+            JLabel lateLabel, JLabel absentLabel) {
+        int totalCount = dataList.size();
+        int totalLate = dataList.stream().mapToInt(StudentAnalysisData::getLateCount).sum();
+        int totalAbsent = dataList.stream().mapToInt(StudentAnalysisData::getAbsentCount).sum();
+
+        totalLabel.setText("总学生数：" + totalCount + " 人");
+        lateLabel.setText("累计迟到：" + totalLate + " 人次");
+        absentLabel.setText("累计缺课：" + totalAbsent + " 人次");
+    }
+
+    // 辅助函数 更新表格内容
+    private void updateAnalyzeTable(List<StudentAnalysisData> dataList, DefaultTableModel tableModel, String filter) {
+        // 清空表格
+        while (tableModel.getRowCount() > 0) {
+            tableModel.removeRow(0);
+        }
+
+        // 筛选并添加数据
+        for (StudentAnalysisData data : dataList) {
+            // 根据筛选条件过滤
+            if ("仅参与点名学生".equals(filter) && !data.isPresent()) {
+                continue;
+            }
+
+            // 转换点名状态为中文显示
+            String presentStatus = data.isPresent() ? "已到场" : "未参与/未到场";
+
+            // 添加到表格
+            tableModel.addRow(new Object[] {
+                    data.getStudentId(),
+                    data.getName(),
+                    data.getLateCount(),
+                    data.getAbsentCount(),
+                    presentStatus
+            });
+        }
     }
 
     protected void createQueryInOrderWindow() {
