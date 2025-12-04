@@ -16,9 +16,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -46,6 +48,11 @@ public class StudentManagerUI extends JFrame {
     private DefaultTableModel tableModel; // 表格数据模型
     private JLabel statusLabel; // 状态提示标签
 
+    // 倒计时组件
+    private JLabel countdownLabel;
+    private Timer countdownTimer;
+    private Map<Integer, Boolean> lateMarkMap;// 记录迟到学生
+
     /**
      * 构造函数：初始化UI和业务服务
      */
@@ -55,6 +62,10 @@ public class StudentManagerUI extends JFrame {
         this.queryService = new StudentQueryAnalyze(dbController);
         this.randomQueryService = new StudentRandomQuery(dbController);
 
+        lateMarkMap = new HashMap<>();
+        countdownLabel = new JLabel("");
+        countdownLabel.setForeground(Color.RED);
+
         // 初始化UI
         initUI();
     }
@@ -62,7 +73,7 @@ public class StudentManagerUI extends JFrame {
     private void initUI() {
         // 窗口配置
         setTitle("学生信息管理系统");
-        setSize(800, 600);
+        setSize(900, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null); // 居中显示
         setLayout(new BorderLayout(10, 10)); // 边界布局，间距10px
@@ -93,13 +104,13 @@ public class StudentManagerUI extends JFrame {
 
         // ---------------------- 中间表格展示区域 ----------------------
         // 表格列名
-        String[] columnNames = { "ID", "姓名", "照片", "是否到场", "补签" };
+        String[] columnNames = { "ID", "姓名", "照片", "是否到场", "迟到", "补签" };
         // 表格数据模型（空数据初始化）
         tableModel = new DefaultTableModel(null, columnNames) {
             // 指定可编辑列
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 4;
+                return column == 5;
             }
 
             // 指定补签列按钮
@@ -128,16 +139,24 @@ public class StudentManagerUI extends JFrame {
         statusLabel.setFont(new Font("宋体", Font.PLAIN, 11));
         statusPanel.add(statusLabel);
 
+        // 增加底部倒计时
+        countdownLabel = new JLabel("");
+        countdownLabel.setForeground(Color.RED);
+
+        statusPanel.add(Box.createHorizontalGlue());// 填充空白调整布局
+        statusPanel.add(countdownLabel);
+
         // 设置列宽
         studentTable.getColumnModel().getColumn(0).setPreferredWidth(60); // ID列
         studentTable.getColumnModel().getColumn(1).setPreferredWidth(80); // 姓名列
         studentTable.getColumnModel().getColumn(2).setPreferredWidth(120); // 照片列
         studentTable.getColumnModel().getColumn(3).setPreferredWidth(80); // 是否到场列
-        studentTable.getColumnModel().getColumn(4).setPreferredWidth(80); // 补签按钮列
+        studentTable.getColumnModel().getColumn(4).setPreferredWidth(80); // 迟到列
+        studentTable.getColumnModel().getColumn(5).setPreferredWidth(80); // 补签按钮列
 
         // 补签按钮渲染
-        studentTable.getColumnModel().getColumn(4).setCellRenderer(new ButtonRenderer());
-        studentTable.getColumnModel().getColumn(4).setCellEditor(new ButtonEditor(new JCheckBox()));
+        studentTable.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
+        studentTable.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JCheckBox()));
 
         // ---------------------- 组装窗口 ----------------------
         add(buttonPanel, BorderLayout.NORTH); // 顶部按钮面板
@@ -208,12 +227,6 @@ public class StudentManagerUI extends JFrame {
             }
         }).start();
         // 读取所有学生写入列表
-
-        new Thread(() ->
-
-        {
-
-        }).start();
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'queryAllStudents'");
     }
@@ -726,6 +739,7 @@ public class StudentManagerUI extends JFrame {
         });
 
         finishBtn.addActionListener(e -> {
+            finishBtn.setEnabled(false);
             if (!orderStudentsList.get().isEmpty()) {
                 Student currentStudent = orderStudentsList.get().get(currentIndex[0]);
                 presentStatusMap.put(Long.valueOf(currentStudent.getStudent_id()), presentCheckBox.isSelected());
@@ -758,9 +772,13 @@ public class StudentManagerUI extends JFrame {
                     tableModel.fireTableDataChanged();
                 });
 
+                // 启动倒计时
+                startCountDown(10);
+
                 // 更新主界面状态提示
                 SwingUtilities.invokeLater(() -> statusLabel.setText(String.format("顺序点名结束：共%d名学生，到场%d人",
                         orderStudentsList.get().size(), presentCount)));
+                countdownLabel.setText("补签倒计时:");
             }
             orderDialog.dispose();
         });
@@ -814,6 +832,60 @@ public class StudentManagerUI extends JFrame {
 
         orderDialog.setVisible(true);
 
+    }
+
+    // 辅助函数 倒计时
+    private void startCountDown(int timeSet) {
+        if (countdownTimer != null) {
+            countdownTimer.cancel();
+        }
+        lateMarkMap.clear();
+
+        // int totalSeconds = timeSet * 60;// 设定总倒计时时间
+        countdownTimer = new Timer();
+        AtomicInteger totalSeconds = new AtomicInteger(timeSet * 60);
+        countdownTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                if (totalSeconds.get() <= 0) {
+                    SwingUtilities.invokeLater(() -> {
+                        countdownLabel.setText("倒计时结束!补签视为迟到!");
+                        statusLabel.setText(statusLabel.getText().replace("补签倒计时开始", "倒计时结束"));
+
+                    });
+                    markLateAfterCountdown();
+                    countdownTimer.cancel();
+                    return;
+                }
+                int minutes = totalSeconds.get() / 60;
+                int seconds = totalSeconds.get() % 60;
+                String timeStr = String.format("%02d:%02d", minutes, seconds);
+                SwingUtilities.invokeLater(() -> countdownLabel.setText("补签倒计时：" + timeStr));
+
+                totalSeconds.decrementAndGet();
+            }
+        }, 0, 1000);
+    }
+
+    // 辅助函数 迟到后补签视为迟到不缺席
+    private void markLateAfterCountdown() {
+        SwingUtilities.invokeLater(() -> {
+            for (int row = 0; row < tableModel.getRowCount(); row++) {
+                try {
+                    int studentId = Integer.parseInt(tableModel.getValueAt(row, 0).toString().trim());
+                    boolean isPresent = (boolean) tableModel.getValueAt(row, 3);
+                    // 未签到且已补签的学生：标记为迟到（不缺席）
+                    if (isPresent && lateMarkMap.containsKey(studentId)) {
+                        tableModel.setValueAt(true, row, 4); // 迟到列=true
+                        // 缺席列保持false（不缺席）
+                    }
+                } catch (Exception e) {
+                    System.err.println("标记迟到失败：" + e.getMessage());
+                    continue;
+                }
+            }
+            tableModel.fireTableDataChanged();
+        });
     }
 
     private List<Student> extractStudentsFromTableModel() {
@@ -1302,12 +1374,22 @@ public class StudentManagerUI extends JFrame {
 
         /**
          * 执行补签操作
+         * 新增迟到逻辑
          */
         private void doSupplementSign() {
+            int studentId = Integer.parseInt(tableModel.getValueAt(currentRow, 0).toString().trim());
+            // 判断倒计时是否结束
+            boolean isCountdownEnd = (countdownTimer == null);
+            if (isCountdownEnd) {
+                tableModel.setValueAt(true, currentRow, 4);// 记录迟到
+                lateMarkMap.put(studentId, true);// 记录到迟到缓存
+            } else {
+                tableModel.setValueAt(false, currentRow, 4);// 倒计时内不记为迟到
+            }
             // 更新"是否到场"状态为true
             tableModel.setValueAt(true, currentRow, 3);
             // 刷新补签按钮状态
-            tableModel.fireTableCellUpdated(currentRow, 4);
+            tableModel.fireTableCellUpdated(currentRow, 5);
 
             // 提示补签成功
             String studentName = tableModel.getValueAt(currentRow, 1).toString();
