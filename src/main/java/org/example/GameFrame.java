@@ -1,5 +1,7 @@
 package org.example;
 
+import org.example.CodeStatisticsUI;
+
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -184,7 +186,9 @@ public class GameFrame extends Frame {
                 showClothesDialog(); // 打开衣服颜色配置对话框
                 break;
             case "count":
-                showCountDialog(); // 打开代码行数统计对话框
+                // showCountDialog(); // 打开代码行数统计对话框
+                CodeStatisticsUI.main(null);
+
                 break;
             case "talk":
                 // showTipDialog("Input talk command");

@@ -232,10 +232,11 @@ public class StudentManagerUI extends JFrame {
     }
 
     protected void createAnalizeQueriedStudentsWindow() {
-        // todo 新建窗口, 显示本班所有学生, 增加筛选条件: 本次参与点名的学生
+        // 新建窗口, 显示本班所有学生, 增加筛选条件: 本次参与点名的学生
         // 允许对学生列表按照id、姓名、迟到次数、缺课次数排序
         // 根据本次点到的结果对学生迟到缺课次数做出修改
         // 增加结束签到按钮, 点击后将变化数据写回数据库
+        // todo: 新增迟到逻辑
 
         // 创建窗口
         JDialog analyzeDialog = new JDialog(this, "学生点名统计分析", true);
