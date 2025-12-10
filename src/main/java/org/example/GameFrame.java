@@ -191,7 +191,8 @@ public class GameFrame extends Frame {
                 break;
             case "talk":
                 // todo 用户与ai对话
-                new ShowTalkDialog(this).setVisible(true);
+                // new ShowTalkDialog(this).setVisible(true);
+                new TryAPI(this).setVisible(true);
                 break;
             default:
                 showTipDialog("Invalid command");

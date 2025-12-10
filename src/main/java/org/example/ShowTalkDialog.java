@@ -2,14 +2,30 @@ package org.example;
 
 import javax.swing.*;
 import java.awt.*;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Random;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import com.theokanning.openai.OpenAiClient;
+import com.theokanning.openai.chat.ChatCompletionRequest;
+import com.theokanning.openai.chat.ChatCompletionResult;
+import com.theokanning.openai.chat.ChatMessage;
+import com.theokanning.openai.chat.ChatMessageRole;
+import com.theokanning.openai.service.OpenAiService;
+import okhttp3.OkHttpClient;
+import okhttp3.Proxy;
+import java.net.InetSocketAddress;
 
 class ShowTalkDialog extends JDialog {
     private final JTextArea historyTextArea;
     private final JTextField inputField;
-    private final Random random;
+    private final String openAiApiKey; // OpenAI API 密钥
+    private final String openAiModel; // 模型名称（如 gpt-3.5-turbo）
+    private final String openAiBaseUrl; // API 基础地址（默认/代理地址）
+    private OpenAiClient openAiClient; // OpenAI 客户端
+    private final List<LocalChatMessage> chatHistory; // 结构化对话历史（支持上下文）
+    private LocalChatMessage thinkingMessage; // 「正在思考」占位消息
 
     // 类构造函数
     public ShowTalkDialog(Frame parent) {
