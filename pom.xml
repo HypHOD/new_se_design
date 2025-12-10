@@ -38,6 +38,33 @@
             <artifactId>postgresql</artifactId>
             <version>42.7.3</version> <!-- 最新版本查询 Maven 仓库 -->
         </dependency>
+
+        <!-- HTTP客户端 -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
+        <!-- JSON解析（FastJSON2） -->
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+            <version>2.0.50</version>
+        </dependency>
+        <!-- 日志（可选，便于调试） -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.9</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>2.0.9</version>
+            <scope>runtime</scope>
+        </dependency>
+
+     
     </dependencies>
     
 
