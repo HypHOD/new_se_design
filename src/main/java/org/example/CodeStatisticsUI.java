@@ -3,6 +3,8 @@ package org.example;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.geom.Arc2D;
+import java.awt.geom.Rectangle2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -10,14 +12,13 @@ import java.io.IOException;
 import java.util.*;
 import java.util.List;
 
-class CodeStatisticsUI extends JFrame {
+public class CodeStatisticsUI extends JFrame {
     private JTextField directoryField;
     private JTextArea resultArea;
     private JTable resultTable;
     private JProgressBar progressBar;
     private JButton statsButton;
 
-    // 语言配置
     private static final Map<String, String[]> LANGUAGE_CONFIG = new HashMap<>();
     static {
         LANGUAGE_CONFIG.put("Java", new String[] { ".java" });
@@ -27,161 +28,61 @@ class CodeStatisticsUI extends JFrame {
         LANGUAGE_CONFIG.put("C#", new String[] { ".cs" });
     }
 
-    // 跳过目录
     private static final Set<String> SKIP_DIRS = new HashSet<>(Arrays.asList(
             ".git", ".idea", "target", "build", "out", "node_modules", "__pycache__"));
 
-    // 新增：对外静态调用返回的计数结果模型
-    public static class CountResult {
-        public int fileCount;
-        public int totalLines;
-        public int blankLines;
-        public int commentLines;
-        public int codeLines;
+    private Set<String> selectedLanguages;
+    private boolean countBlankInTotal;
+    private boolean countCommentInTotal;
 
-        public CountResult() {
-        }
-    }
+    private BarChartPanel barChartPanel;
+    private PieChartPanel pieChartPanel1;
+    private PieChartPanel pieChartPanel2;
 
-    // 新增：静态方法，按 extensions 列表统计目录（递归）
-    public static CountResult countCodeLines(File rootDir, String[] extensions, boolean countEmpty,
-            boolean countComment) throws IOException {
-        CountResult result = new CountResult();
-        if (rootDir == null || !rootDir.exists())
-            return result;
-        List<String> extList = new ArrayList<>();
-        if (extensions != null) {
-            for (String e : extensions) {
-                if (e != null && !e.trim().isEmpty())
-                    extList.add(e.toLowerCase());
-            }
-        }
-        countRecursive(rootDir, extList, result);
-        // 如果不统计空行或注释行，则将这些计数视为 0（上层逻辑可能依赖）
-        if (!countEmpty)
-            result.blankLines = 0;
-        if (!countComment)
-            result.commentLines = 0;
-        // codeLines = totalLines - blank - comment （保底）
-        result.codeLines = Math.max(0, result.totalLines - result.blankLines - result.commentLines);
-        return result;
-    }
-
-    // 递归扫描计算
-    private static void countRecursive(File dir, List<String> extensions, CountResult result) throws IOException {
-        File[] files = dir.listFiles();
-        if (files == null)
-            return;
-        for (File f : files) {
-            if (f.isDirectory()) {
-                String name = f.getName();
-                if (name.equals(".git") || name.equals(".idea") || name.equals("target") || name.equals("build")
-                        || name.equals("out") || name.equals("node_modules") || name.equals("__pycache__")) {
-                    continue;
-                }
-                countRecursive(f, extensions, result);
-            } else {
-                String fname = f.getName().toLowerCase();
-                boolean match = extensions.isEmpty();
-                for (String ext : extensions) {
-                    if (fname.endsWith(ext)) {
-                        match = true;
-                        break;
-                    }
-                }
-                if (!match)
-                    continue;
-                // 分析文件
-                analyzeFileStatic(f, result);
-                result.fileCount++;
-            }
-        }
-    }
-
-    // 简化复用的文件分析逻辑（统计 total/blank/comment，采用 C 风格与 Python 简单处理）
-    private static void analyzeFileStatic(File file, CountResult result) {
-        boolean inBlockComment = false;
-        boolean inPythonMulti = false;
-        String name = file.getName().toLowerCase();
-        boolean isPython = name.endsWith(".py");
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                result.totalLines++;
-                String t = line.trim();
-                if (t.isEmpty()) {
-                    result.blankLines++;
-                    continue;
-                }
-                if (isPython) {
-                    if (t.startsWith("#")) {
-                        result.commentLines++;
-                        continue;
-                    }
-                    if ((t.startsWith("\"\"\"") || t.startsWith("'''"))) {
-                        // 判断单行三引号注释
-                        if ((t.endsWith("\"\"\"") || t.endsWith("'''")) && t.length() > 3) {
-                            result.commentLines++;
-                            continue;
-                        } else {
-                            result.commentLines++;
-                            inPythonMulti = !inPythonMulti;
-                            continue;
-                        }
-                    }
-                    if (inPythonMulti) {
-                        result.commentLines++;
-                        if (t.contains("\"\"\"") || t.contains("'''"))
-                            inPythonMulti = false;
-                        continue;
-                    }
-                } else {
-                    if (inBlockComment) {
-                        result.commentLines++;
-                        if (t.contains("*/"))
-                            inBlockComment = false;
-                        continue;
-                    }
-                    if (t.startsWith("/*")) {
-                        result.commentLines++;
-                        if (!t.contains("*/"))
-                            inBlockComment = true;
-                        continue;
-                    }
-                    if (t.startsWith("//")) {
-                        result.commentLines++;
-                        continue;
-                    }
-                }
-                // 其余视为代码行，具体的 codeLines 由调用端按需计算
-            }
-        } catch (Exception ignored) {
-            // 读取失败不抛出，跳过该文件
-
-        }
-    }
+    private static final Color COLOR_FILE_COUNT = new Color(59, 130, 246);
+    private static final Color COLOR_CODE_LINE = new Color(249, 115, 22);
+    private static final Color[] PIE_COLORS = {
+            new Color(34, 197, 94),
+            new Color(251, 191, 36),
+            new Color(239, 68, 68)
+    };
+    private static final Color[] LANG_PIE_COLORS = {
+            new Color(59, 130, 246),
+            new Color(168, 85, 247),
+            new Color(239, 68, 68),
+            new Color(34, 197, 94),
+            new Color(249, 115, 22)
+    };
 
     public CodeStatisticsUI() {
+        selectedLanguages = new HashSet<>(LANGUAGE_CONFIG.keySet());
+        countBlankInTotal = true;
+        countCommentInTotal = true;
+
+        barChartPanel = new BarChartPanel();
+        pieChartPanel1 = new PieChartPanel("代码行构成（整体）", -13);
+        pieChartPanel2 = new PieChartPanel("各语言文件数占比");
+
         initUI();
     }
 
     private void initUI() {
         setTitle("代码统计工具");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1200, 800);
+        setSize(1400, 900);
         setLocationRelativeTo(null);
 
-        // 创建主面板
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // 顶部控制面板
         JPanel controlPanel = new JPanel(new BorderLayout(5, 5));
         directoryField = new JTextField("D:\\testcase5");
         JButton browseButton = new JButton("浏览...");
+        JButton configButton = new JButton("统计配置");
         statsButton = new JButton("开始统计");
 
         browseButton.addActionListener(e -> browseDirectory());
+        configButton.addActionListener(e -> showConfigDialog());
         statsButton.addActionListener(e -> startStatistics());
 
         JPanel pathPanel = new JPanel(new BorderLayout(5, 5));
@@ -189,14 +90,16 @@ class CodeStatisticsUI extends JFrame {
         pathPanel.add(directoryField, BorderLayout.CENTER);
         pathPanel.add(browseButton, BorderLayout.EAST);
 
-        controlPanel.add(pathPanel, BorderLayout.CENTER);
-        controlPanel.add(statsButton, BorderLayout.EAST);
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        buttonPanel.add(configButton);
+        buttonPanel.add(statsButton);
 
-        // 进度条
+        controlPanel.add(pathPanel, BorderLayout.CENTER);
+        controlPanel.add(buttonPanel, BorderLayout.EAST);
+
         progressBar = new JProgressBar();
         progressBar.setVisible(false);
 
-        // 结果表格 - 增加统计信息列
         String[] columnNames = { "语言", "文件数", "总行数", "代码行", "空行", "注释行", "函数数",
                 "最大代码行", "最小代码行", "平均代码行", "中位数" };
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
@@ -208,27 +111,399 @@ class CodeStatisticsUI extends JFrame {
         resultTable = new JTable(tableModel);
         resultTable.setPreferredScrollableViewportSize(new Dimension(1000, 200));
 
-        // 详细结果区域
         resultArea = new JTextArea(20, 80);
         resultArea.setEditable(false);
         resultArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
 
-        // 标签面板
+        JPanel chartPanel = new JPanel(new GridLayout(1, 2, 10, 10));
+        JPanel pieSubPanel = new JPanel(new GridLayout(2, 1, 10, 10));
+        pieSubPanel.add(pieChartPanel1);
+        pieSubPanel.add(pieChartPanel2);
+        chartPanel.add(barChartPanel);
+        chartPanel.add(pieSubPanel);
+
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.addTab("汇总统计", new JScrollPane(resultTable));
         tabbedPane.addTab("详细结果", new JScrollPane(resultArea));
+        tabbedPane.addTab("数据可视化", chartPanel);
 
-        // 布局组装
         mainPanel.add(controlPanel, BorderLayout.NORTH);
         mainPanel.add(progressBar, BorderLayout.CENTER);
         mainPanel.add(tabbedPane, BorderLayout.SOUTH);
 
         add(mainPanel);
 
-        // 初始显示一些信息
         resultArea.setText("代码统计工具已就绪\n");
         resultArea.append("请选择目录并点击\"开始统计\"按钮\n\n");
+        resultArea.append("默认配置：统计所有支持语言，空行/注释行计入总行数\n");
         resultArea.append("支持的语言: " + String.join(", ", LANGUAGE_CONFIG.keySet()) + "\n");
+    }
+
+    class BarChartPanel extends JPanel {
+        private List<String> languages = new ArrayList<>();
+        private List<Integer> fileCounts = new ArrayList<>();
+        private List<Integer> codeLines = new ArrayList<>();
+        private int maxValue = 1;
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int width = getWidth();
+            int height = getHeight();
+
+            int marginLeft = 80;
+            int marginRight = 20;
+            int marginTop = 40;
+            int marginBottom = 60;
+
+            int plotWidth = width - marginLeft - marginRight;
+            int plotHeight = height - marginTop - marginBottom;
+
+            if (languages.isEmpty()) {
+                g2.setFont(new Font("微软雅黑", Font.PLAIN, 16));
+                g2.drawString("暂无统计数据", width / 2 - 40, height / 2);
+                return;
+            }
+
+            int barGroupWidth = plotWidth / languages.size();
+            int barWidth = barGroupWidth / 4;
+            int barGap = barGroupWidth / 8;
+
+            g2.setFont(new Font("微软雅黑", Font.BOLD, 18));
+            g2.drawString("各语言文件数 & 代码行数对比", width / 2 - 100, 25);
+
+            g2.setColor(Color.BLACK);
+            g2.drawLine(marginLeft, marginTop, marginLeft, height - marginBottom);
+
+            int tickCount = 5;
+            g2.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+            for (int i = 0; i <= tickCount; i++) {
+                int y = height - marginBottom - (i * plotHeight / tickCount);
+                int value = (int) (maxValue * (i / (double) tickCount));
+                g2.drawLine(marginLeft - 5, y, marginLeft, y);
+                g2.drawString(String.valueOf(value), marginLeft - 50, y + 5);
+            }
+
+            g2.drawLine(marginLeft, height - marginBottom, width - marginRight, height - marginBottom);
+
+            g2.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+            for (int i = 0; i < languages.size(); i++) {
+                String lang = languages.get(i);
+                int fileCount = fileCounts.get(i);
+                int codeLine = codeLines.get(i);
+
+                int groupX = marginLeft + i * barGroupWidth;
+                int fileBarX = groupX + barGap;
+                int codeBarX = fileBarX + barWidth + barGap;
+
+                int fileBarHeight = (int) (fileCount / (double) maxValue * plotHeight);
+                int codeBarHeight = (int) (codeLine / (double) maxValue * plotHeight);
+
+                g2.setColor(COLOR_FILE_COUNT);
+                Rectangle2D fileBar = new Rectangle2D.Double(
+                        fileBarX, height - marginBottom - fileBarHeight,
+                        barWidth, fileBarHeight);
+                g2.fill(fileBar);
+                g2.setColor(Color.BLACK);
+                g2.draw(fileBar);
+
+                g2.setColor(COLOR_CODE_LINE);
+                Rectangle2D codeBar = new Rectangle2D.Double(
+                        codeBarX, height - marginBottom - codeBarHeight,
+                        barWidth, codeBarHeight);
+                g2.fill(codeBar);
+                g2.setColor(Color.BLACK);
+                g2.draw(codeBar);
+
+                g2.drawString(lang, groupX + barGroupWidth / 2 - 15, height - marginBottom + 20);
+
+                if (fileBarHeight > 0) {
+                    g2.drawString(String.valueOf(fileCount),
+                            fileBarX + barWidth / 2 - 10,
+                            height - marginBottom - fileBarHeight - 5);
+                }
+                if (codeBarHeight > 0) {
+                    g2.drawString(String.valueOf(codeLine),
+                            codeBarX + barWidth / 2 - 10,
+                            height - marginBottom - codeBarHeight - 5);
+                }
+            }
+
+            int legendX = width - 200;
+            int legendY = marginTop;
+            g2.setColor(COLOR_FILE_COUNT);
+            g2.fillRect(legendX, legendY, 15, 15);
+            g2.setColor(Color.BLACK);
+            g2.drawRect(legendX, legendY, 15, 15);
+            g2.drawString("文件数", legendX + 20, legendY + 12);
+
+            g2.setColor(COLOR_CODE_LINE);
+            g2.fillRect(legendX, legendY + 20, 15, 15);
+            g2.setColor(Color.BLACK);
+            g2.drawRect(legendX, legendY + 20, 15, 15);
+            g2.drawString("代码行数", legendX + 20, legendY + 32);
+        }
+
+        public void updateData(List<String> langs, List<Integer> fileCounts, List<Integer> codeLines) {
+            this.languages = new ArrayList<>(langs);
+            this.fileCounts = new ArrayList<>(fileCounts);
+            this.codeLines = new ArrayList<>(codeLines);
+            this.maxValue = 1;
+            for (int val : fileCounts) {
+                maxValue = Math.max(maxValue, val);
+            }
+            for (int val : codeLines) {
+                maxValue = Math.max(maxValue, val);
+            }
+            maxValue = (int) (Math.ceil(maxValue / 10.0) * 10);
+            if (maxValue == 0)
+                maxValue = 1;
+            repaint();
+        }
+
+        public void clearData() {
+            languages.clear();
+            fileCounts.clear();
+            codeLines.clear();
+            repaint();
+        }
+    }
+
+    class PieChartPanel extends JPanel {
+        private String title;
+        private List<String> labels = new ArrayList<>();
+        private List<Integer> values = new ArrayList<>();
+        private List<Color> colors = new ArrayList<>();
+        private int verticalOffset = 0;
+
+        public PieChartPanel(String title) {
+            this.title = title;
+        }
+
+        public PieChartPanel(String title, int verticalOffset) {
+            this.title = title;
+            this.verticalOffset = verticalOffset;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int width = getWidth();
+            int height = getHeight();
+
+            g2.setFont(new Font("微软雅黑", Font.BOLD, 18));
+            g2.drawString(title, width / 2 - 80, 30);
+
+            if (values.isEmpty() || sum(values) == 0) {
+                g2.setFont(new Font("微软雅黑", Font.PLAIN, 16));
+                g2.drawString("暂无统计数据", width / 2 - 40, height / 2);
+                return;
+            }
+
+            int pieSize = Math.min(width, height) - 100;
+            int pieX = (width - pieSize) / 2;
+            int pieY = (height - pieSize) / 2 + 30 + verticalOffset;
+
+            int total = sum(values);
+            double startAngle = 0;
+            g2.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+
+            for (int i = 0; i < values.size(); i++) {
+                int value = values.get(i);
+                if (value == 0)
+                    continue;
+
+                double arcAngle = (value / (double) total) * 360;
+                Color color = colors.size() > i ? colors.get(i) : Color.GRAY;
+
+                g2.setColor(color);
+                Arc2D arc = new Arc2D.Double(
+                        pieX, pieY, pieSize, pieSize,
+                        startAngle, arcAngle, Arc2D.PIE);
+                g2.fill(arc);
+                g2.setColor(Color.BLACK);
+                g2.draw(arc);
+
+                double midAngle = startAngle + arcAngle / 2;
+                double radian = Math.toRadians(midAngle);
+                int labelRadius = pieSize / 2 + 30;
+                int labelX = (int) (pieX + pieSize / 2 + Math.cos(radian) * labelRadius);
+                int labelY = (int) (pieY + pieSize / 2 - Math.sin(radian) * labelRadius);
+
+                double percent = (value / (double) total) * 100;
+                String label = String.format("%s (%.1f%%)", labels.get(i), percent);
+                g2.drawString(label, labelX - 30, labelY + 5);
+
+                startAngle += arcAngle;
+            }
+
+            int legendX = 40;
+            int legendY = height - 80;
+            for (int i = 0; i < labels.size(); i++) {
+                if (values.get(i) == 0)
+                    continue;
+
+                Color color = colors.size() > i ? colors.get(i) : Color.GRAY;
+                g2.setColor(color);
+                g2.fillRect(legendX, legendY + i * 20, 15, 15);
+                g2.setColor(Color.BLACK);
+                g2.drawRect(legendX, legendY + i * 20, 15, 15);
+                g2.drawString(labels.get(i), legendX + 20, legendY + i * 20 + 12);
+            }
+        }
+
+        private int sum(List<Integer> list) {
+            int total = 0;
+            for (int val : list) {
+                total += val;
+            }
+            return total;
+        }
+
+        public void updateData(List<String> labels, List<Integer> values, List<Color> colors) {
+            this.labels = new ArrayList<>(labels);
+            this.values = new ArrayList<>(values);
+            this.colors = new ArrayList<>(colors);
+            repaint();
+        }
+
+        public void clearData() {
+            labels.clear();
+            values.clear();
+            colors.clear();
+            repaint();
+        }
+    }
+
+    private void updateCharts(Map<String, LanguageStats> statsMap, int totalCode, int totalBlank, int totalComment) {
+        List<String> barLangs = new ArrayList<>();
+        List<Integer> barFileCounts = new ArrayList<>();
+        List<Integer> barCodeLines = new ArrayList<>();
+        for (Map.Entry<String, LanguageStats> entry : statsMap.entrySet()) {
+            String lang = entry.getKey();
+            LanguageStats stats = entry.getValue();
+            if (stats.fileCount > 0) {
+                barLangs.add(lang);
+                barFileCounts.add(stats.fileCount);
+                barCodeLines.add(stats.codeLines);
+            }
+        }
+        barChartPanel.updateData(barLangs, barFileCounts, barCodeLines);
+
+        List<String> pie1Labels = Arrays.asList("代码行", "空行", "注释行");
+        List<Integer> pie1Values = Arrays.asList(totalCode, totalBlank, totalComment);
+        List<Color> pie1Colors = Arrays.asList(PIE_COLORS[0], PIE_COLORS[1], PIE_COLORS[2]);
+        pieChartPanel1.updateData(pie1Labels, pie1Values, pie1Colors);
+
+        List<String> pie2Labels = new ArrayList<>();
+        List<Integer> pie2Values = new ArrayList<>();
+        List<Color> pie2Colors = new ArrayList<>();
+        int colorIndex = 0;
+        for (Map.Entry<String, LanguageStats> entry : statsMap.entrySet()) {
+            String lang = entry.getKey();
+            int count = entry.getValue().fileCount;
+            if (count > 0) {
+                pie2Labels.add(lang);
+                pie2Values.add(count);
+                pie2Colors.add(LANG_PIE_COLORS[colorIndex % LANG_PIE_COLORS.length]);
+                colorIndex++;
+            }
+        }
+        pieChartPanel2.updateData(pie2Labels, pie2Values, pie2Colors);
+    }
+
+    private void clearCharts() {
+        barChartPanel.clearData();
+        pieChartPanel1.clearData();
+        pieChartPanel2.clearData();
+    }
+
+    private void showConfigDialog() {
+        JDialog configDialog = new JDialog(this, "统计配置", true);
+        configDialog.setSize(400, 350);
+        configDialog.setLocationRelativeTo(this);
+        configDialog.setLayout(new BorderLayout(10, 10));
+        configDialog.setResizable(false);
+
+        JPanel contentPanel = new JPanel();
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+
+        JPanel languagePanel = new JPanel();
+        languagePanel.setBorder(BorderFactory.createTitledBorder("选择要统计的语言"));
+        languagePanel.setLayout(new GridLayout(0, 2, 10, 5));
+
+        Map<String, JCheckBox> langCheckBoxes = new HashMap<>();
+        for (String lang : LANGUAGE_CONFIG.keySet()) {
+            JCheckBox checkBox = new JCheckBox(lang);
+            checkBox.setSelected(selectedLanguages.contains(lang));
+            langCheckBoxes.put(lang, checkBox);
+            languagePanel.add(checkBox);
+        }
+
+        JPanel langButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        JButton selectAllBtn = new JButton("全选");
+        JButton deselectAllBtn = new JButton("取消全选");
+        selectAllBtn.addActionListener(e -> langCheckBoxes.values().forEach(cb -> cb.setSelected(true)));
+        deselectAllBtn.addActionListener(e -> langCheckBoxes.values().forEach(cb -> cb.setSelected(false)));
+        langButtonPanel.add(selectAllBtn);
+        langButtonPanel.add(deselectAllBtn);
+
+        JPanel totalLinePanel = new JPanel();
+        totalLinePanel.setBorder(BorderFactory.createTitledBorder("总行数计算规则"));
+        totalLinePanel.setLayout(new GridLayout(2, 1, 5, 5));
+
+        JCheckBox blankInTotalCb = new JCheckBox("空行计入总行数", countBlankInTotal);
+        JCheckBox commentInTotalCb = new JCheckBox("注释行计入总行数", countCommentInTotal);
+        totalLinePanel.add(blankInTotalCb);
+        totalLinePanel.add(commentInTotalCb);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JButton confirmBtn = new JButton("确认");
+        JButton cancelBtn = new JButton("取消");
+
+        confirmBtn.addActionListener(e -> {
+            selectedLanguages.clear();
+            for (Map.Entry<String, JCheckBox> entry : langCheckBoxes.entrySet()) {
+                if (entry.getValue().isSelected()) {
+                    selectedLanguages.add(entry.getKey());
+                }
+            }
+            if (selectedLanguages.isEmpty()) {
+                JOptionPane.showMessageDialog(configDialog, "请至少选择一种统计语言！", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            countBlankInTotal = blankInTotalCb.isSelected();
+            countCommentInTotal = commentInTotalCb.isSelected();
+            configDialog.dispose();
+
+            resultArea.append("\n=== 配置已更新 ===\n");
+            resultArea.append("选中的统计语言: " + String.join(", ", selectedLanguages) + "\n");
+            resultArea.append("空行计入总行数: " + (countBlankInTotal ? "是" : "否") + "\n");
+            resultArea.append("注释行计入总行数: " + (countCommentInTotal ? "是" : "否") + "\n\n");
+        });
+
+        cancelBtn.addActionListener(e -> configDialog.dispose());
+
+        buttonPanel.add(confirmBtn);
+        buttonPanel.add(cancelBtn);
+
+        contentPanel.add(languagePanel);
+        contentPanel.add(Box.createVerticalStrut(10));
+        contentPanel.add(langButtonPanel);
+        contentPanel.add(Box.createVerticalStrut(15));
+        contentPanel.add(totalLinePanel);
+        contentPanel.add(Box.createVerticalStrut(15));
+        contentPanel.add(buttonPanel);
+
+        configDialog.add(contentPanel, BorderLayout.CENTER);
+        configDialog.setVisible(true);
     }
 
     private void browseDirectory() {
@@ -248,14 +523,17 @@ class CodeStatisticsUI extends JFrame {
             return;
         }
 
-        // 清空之前的结果
+        if (selectedLanguages.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "请先在统计配置中选择至少一种语言！", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         ((DefaultTableModel) resultTable.getModel()).setRowCount(0);
         resultArea.setText("");
+        clearCharts();
 
-        // 禁用按钮防止重复点击
         statsButton.setEnabled(false);
 
-        // 在新线程中执行统计任务
         new StatisticsWorker(testDir).execute();
     }
 
@@ -270,23 +548,27 @@ class CodeStatisticsUI extends JFrame {
         protected Map<String, LanguageStats> doInBackground() throws Exception {
             publish("开始统计代码量...\n");
             publish("扫描目录: " + rootDir.getAbsolutePath() + "\n");
+            publish("统计配置：\n");
+            publish("  选中语言: " + String.join(", ", selectedLanguages) + "\n");
+            publish("  空行计入总行数: " + (countBlankInTotal ? "是" : "否") + "\n");
+            publish("  注释行计入总行数: " + (countCommentInTotal ? "是" : "否") + "\n");
 
             Map<String, LanguageStats> result = new HashMap<>();
-            for (String lang : LANGUAGE_CONFIG.keySet()) {
+            for (String lang : selectedLanguages) {
                 result.put(lang, new LanguageStats());
             }
 
-            // 显示支持的文件类型
-            publish("支持的文件类型:\n");
-            for (Map.Entry<String, String[]> entry : LANGUAGE_CONFIG.entrySet()) {
-                publish("  " + entry.getKey() + ": " + String.join(", ", entry.getValue()) + "\n");
+            publish("\n选中语言的文件类型:\n");
+            for (String lang : selectedLanguages) {
+                publish("  " + lang + ": " + String.join(", ", LANGUAGE_CONFIG.get(lang)) + "\n");
             }
             publish("\n");
 
             progressBar.setVisible(true);
-            progressBar.setIndeterminate(true); // 使用不确定进度条
+            progressBar.setIndeterminate(true);
 
             scanDirectory(rootDir, result, rootDir);
+
             return result;
         }
 
@@ -294,7 +576,6 @@ class CodeStatisticsUI extends JFrame {
         protected void process(List<String> chunks) {
             for (String chunk : chunks) {
                 resultArea.append(chunk);
-                // 滚动到底部
                 resultArea.setCaretPosition(resultArea.getDocument().getLength());
             }
         }
@@ -335,7 +616,7 @@ class CodeStatisticsUI extends JFrame {
                     }
                 } else {
                     String language = getLanguage(file);
-                    if (language != null) {
+                    if (language != null && selectedLanguages.contains(language)) {
                         FileStats stats = analyzeFile(file, language);
                         if (stats != null) {
                             result.get(language).addFileStats(stats, getRelativePath(file, baseDir));
@@ -360,14 +641,11 @@ class CodeStatisticsUI extends JFrame {
     }
 
     private void displayResults(Map<String, LanguageStats> result) {
-        // 更新表格
         DefaultTableModel model = (DefaultTableModel) resultTable.getModel();
         model.setRowCount(0);
 
         int totalFiles = 0, totalLines = 0, totalCodeLines = 0,
                 totalBlankLines = 0, totalCommentLines = 0, totalFunctions = 0;
-
-        // 收集所有代码行数用于总体统计
         List<Integer> allCodeLines = new ArrayList<>();
 
         resultArea.append("\n=== 代码统计结果汇总 ===\n");
@@ -378,15 +656,12 @@ class CodeStatisticsUI extends JFrame {
             LanguageStats stats = entry.getValue();
 
             if (stats.fileCount == 0) {
-                continue; // 跳过没有文件的语言
+                continue;
             }
-
             hasData = true;
 
-            // 计算统计信息
             Map<String, Double> statistics = calculateStatistics(stats.codeLinesList);
 
-            // 添加到表格
             model.addRow(new Object[] {
                     language, stats.fileCount, stats.totalLines, stats.codeLines,
                     stats.blankLines, stats.commentLines, stats.functionCount,
@@ -400,16 +675,12 @@ class CodeStatisticsUI extends JFrame {
             totalBlankLines += stats.blankLines;
             totalCommentLines += stats.commentLines;
             totalFunctions += stats.functionCount;
-
-            // 添加到总体统计列表
             allCodeLines.addAll(stats.codeLinesList);
 
             resultArea.append(String.format("\n%s 语言统计:\n", language));
             resultArea.append(String.format("文件数量: %d\n", stats.fileCount));
             resultArea.append(String.format("总行数: %d, 代码行: %d, 空行: %d, 注释行: %d, 函数数: %d\n",
                     stats.totalLines, stats.codeLines, stats.blankLines, stats.commentLines, stats.functionCount));
-
-            // 显示统计信息
             resultArea.append("代码行数统计:\n");
             resultArea.append(String.format("  最大值: %.0f\n", statistics.get("max")));
             resultArea.append(String.format("  最小值: %.0f\n", statistics.get("min")));
@@ -426,15 +697,14 @@ class CodeStatisticsUI extends JFrame {
         }
 
         if (!hasData) {
-            resultArea.append("\n未找到任何代码文件！\n");
-            resultArea.append("请检查目录路径和文件类型\n");
+            resultArea.append("\n未找到任何选中语言的代码文件！\n");
+            resultArea.append("请检查目录路径和选中的语言类型\n");
+            clearCharts();
             return;
         }
 
-        // 计算总体统计信息
         Map<String, Double> overallStatistics = calculateStatistics(allCodeLines);
 
-        // 添加总计行
         model.addRow(new Object[] {
                 "总计", totalFiles, totalLines, totalCodeLines,
                 totalBlankLines, totalCommentLines, totalFunctions,
@@ -446,8 +716,6 @@ class CodeStatisticsUI extends JFrame {
         resultArea.append(String.format("总文件数: %d\n", totalFiles));
         resultArea.append(String.format("总行数: %d, 代码行: %d, 空行: %d, 注释行: %d, 函数数: %d\n",
                 totalLines, totalCodeLines, totalBlankLines, totalCommentLines, totalFunctions));
-
-        // 显示总体统计信息
         resultArea.append("总体代码行数统计:\n");
         resultArea.append(String.format("  最大值: %.0f\n", overallStatistics.get("max")));
         resultArea.append(String.format("  最小值: %.0f\n", overallStatistics.get("min")));
@@ -462,12 +730,12 @@ class CodeStatisticsUI extends JFrame {
                     codePercent, blankPercent, commentPercent));
         }
 
-        // 刷新表格
+        updateCharts(result, totalCodeLines, totalBlankLines, totalCommentLines);
+
         model.fireTableDataChanged();
         resultTable.repaint();
     }
 
-    // 计算统计值：均值、最大值、最小值、中位数
     public static Map<String, Double> calculateStatistics(List<Integer> values) {
         Map<String, Double> stats = new HashMap<>();
 
@@ -479,21 +747,17 @@ class CodeStatisticsUI extends JFrame {
             return stats;
         }
 
-        // 排序以便计算中位数
         Collections.sort(values);
 
-        // 计算平均值
         double sum = 0;
         for (int value : values) {
             sum += value;
         }
         double mean = sum / values.size();
 
-        // 最大值和最小值
         int max = values.get(values.size() - 1);
         int min = values.get(0);
 
-        // 中位数
         double median;
         int middle = values.size() / 2;
         if (values.size() % 2 == 0) {
@@ -510,7 +774,6 @@ class CodeStatisticsUI extends JFrame {
         return stats;
     }
 
-    // 简化的文件统计类
     static class FileStats {
         int totalLines, codeLines, blankLines, commentLines, functionCount;
 
@@ -525,7 +788,6 @@ class CodeStatisticsUI extends JFrame {
         }
     }
 
-    // 语言统计类 - 增加代码行数列表用于统计计算
     static class LanguageStats {
         int fileCount, totalLines, codeLines, blankLines, commentLines, functionCount;
         List<Integer> codeLinesList;
@@ -547,11 +809,10 @@ class CodeStatisticsUI extends JFrame {
             blankLines += stats.blankLines;
             commentLines += stats.commentLines;
             functionCount += stats.functionCount;
-            codeLinesList.add(stats.codeLines); // 记录每个文件的代码行数
+            codeLinesList.add(stats.codeLines);
         }
     }
 
-    // 分析单个文件
     private FileStats analyzeFile(File file, String language) {
         FileStats stats = new FileStats();
         boolean inBlockComment = false;
@@ -560,66 +821,78 @@ class CodeStatisticsUI extends JFrame {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                stats.totalLines++;
                 String trimmedLine = line.trim();
+                int lineContribute = 0;
 
                 if (trimmedLine.isEmpty()) {
                     stats.blankLines++;
-                    continue;
-                }
-
-                // 注释处理
-                if (language.equals("Python")) {
+                    if (countBlankInTotal) {
+                        lineContribute = 1;
+                    }
+                } else if (language.equals("Python")) {
                     if (trimmedLine.startsWith("#")) {
                         stats.commentLines++;
-                        continue;
-                    }
-                    if ((trimmedLine.startsWith("\"\"\"") || trimmedLine.startsWith("'''")) &&
+                        if (countCommentInTotal) {
+                            lineContribute = 1;
+                        }
+                    } else if ((trimmedLine.startsWith("\"\"\"") || trimmedLine.startsWith("'''")) &&
                             (trimmedLine.endsWith("\"\"\"") || trimmedLine.endsWith("'''"))
                             && trimmedLine.length() > 3) {
                         stats.commentLines++;
-                        continue;
-                    }
-                    if (inPythonMultiLineString) {
+                        if (countCommentInTotal) {
+                            lineContribute = 1;
+                        }
+                    } else if (inPythonMultiLineString) {
                         stats.commentLines++;
+                        if (countCommentInTotal) {
+                            lineContribute = 1;
+                        }
                         if (trimmedLine.contains("\"\"\"") || trimmedLine.contains("'''")) {
                             inPythonMultiLineString = false;
                         }
-                        continue;
-                    }
-                    if (trimmedLine.startsWith("\"\"\"") || trimmedLine.startsWith("'''")) {
+                    } else if (trimmedLine.startsWith("\"\"\"") || trimmedLine.startsWith("'''")) {
                         stats.commentLines++;
+                        if (countCommentInTotal) {
+                            lineContribute = 1;
+                        }
                         inPythonMultiLineString = true;
-                        continue;
+                    } else {
+                        if (isFunctionLine(line, language)) {
+                            stats.functionCount++;
+                        }
+                        stats.codeLines++;
+                        lineContribute = 1;
                     }
                 } else {
-                    // C风格语言注释处理
                     if (inBlockComment) {
                         stats.commentLines++;
+                        if (countCommentInTotal) {
+                            lineContribute = 1;
+                        }
                         if (trimmedLine.contains("*/")) {
                             inBlockComment = false;
                         }
-                        continue;
-                    }
-
-                    if (trimmedLine.startsWith("/*")) {
+                    } else if (trimmedLine.startsWith("/*")) {
                         stats.commentLines++;
+                        if (countCommentInTotal) {
+                            lineContribute = 1;
+                        }
                         inBlockComment = !trimmedLine.contains("*/");
-                        continue;
-                    }
-
-                    if (trimmedLine.startsWith("//")) {
+                    } else if (trimmedLine.startsWith("//")) {
                         stats.commentLines++;
-                        continue;
+                        if (countCommentInTotal) {
+                            lineContribute = 1;
+                        }
+                    } else {
+                        if (isFunctionLine(line, language)) {
+                            stats.functionCount++;
+                        }
+                        stats.codeLines++;
+                        lineContribute = 1;
                     }
                 }
 
-                // 函数计数（简化版）
-                if (isFunctionLine(line, language)) {
-                    stats.functionCount++;
-                }
-
-                stats.codeLines++;
+                stats.totalLines += lineContribute;
             }
         } catch (IOException e) {
             System.err.println("读取文件失败: " + file.getAbsolutePath());
@@ -658,7 +931,6 @@ class CodeStatisticsUI extends JFrame {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             try {
-                // 设置系统外观
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception e) {
                 try {
