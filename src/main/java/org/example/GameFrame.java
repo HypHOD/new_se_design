@@ -36,19 +36,20 @@ public class GameFrame extends Frame {
     Image clickAreaImg = loadImage("img/click_area.png");
 
     // 衣服图片资源（按季节-时间-天气分类）
-    Image initialClothesImg = loadImage("img/clothes/initial_clothes.png");
-    Image summerDaySunny = loadImage("img/clothes/summer_day_sunny.png");
-    Image summerDayRainy = loadImage("img/clothes/summer_day_rainy.png");
-    Image summerNightSunny = loadImage("img/clothes/summer_night_sunny.png");
-    Image summerNightRainy = loadImage("img/clothes/summer_night_rainy.png");
-    Image winterDaySunny = loadImage("img/clothes/winter_day_sunny.png");
-    Image winterDayRainy = loadImage("img/clothes/winter_day_rainy.png");
-    Image winterNightSunny = loadImage("img/clothes/winter_night_sunny.png");
-    Image winterNightRainy = loadImage("img/clothes/winter_night_rainy.png");
+    // Image initialClothesImg = loadImage("img/clothes/initial_clothes.png");
+    // Image summerDaySunny = loadImage("img/clothes/summer_day_sunny.png");
+    // Image summerDayRainy = loadImage("img/clothes/summer_day_rainy.png");
+    // Image summerNightSunny = loadImage("img/clothes/summer_night_sunny.png");
+    // Image summerNightRainy = loadImage("img/clothes/summer_night_rainy.png");
+    // Image winterDaySunny = loadImage("img/clothes/winter_day_sunny.png");
+    // Image winterDayRainy = loadImage("img/clothes/winter_day_rainy.png");
+    // Image winterNightSunny = loadImage("img/clothes/winter_night_sunny.png");
+    // Image winterNightRainy = loadImage("img/clothes/winter_night_rainy.png");
 
-    Image currentClothesImg = initialClothesImg;
+    // Image currentClothesImg = initialClothesImg;
 
-    private final Map<String, Map<String, Map<String, Image>>> clothesImgConfig = new HashMap<>();
+    // private final Map<String, Map<String, Map<String, Image>>> clothesImgConfig =
+    // new HashMap<>();
     // 坦克状态
     boolean left = false;
     boolean right = false;
@@ -69,6 +70,10 @@ public class GameFrame extends Frame {
     // private final Map<String, Map<String, Map<String, Color>>> clothesColorConfig
     // = new HashMap<>();
 
+    // wear配置
+    private Image currentClothesImg; // 当前衣服图片（由wear模块管理）
+    private ClothesConfig clothesConfig; // wear模块的配置核心
+
     public static void main(String[] args) {
         GameFrame frame = new GameFrame();
 
@@ -88,7 +93,8 @@ public class GameFrame extends Frame {
         setResizable(false); // 固定窗口大小
         startTimeMillis = System.currentTimeMillis();
         // 初始化衣服颜色配置
-        initClothesImgConfig();
+        // initClothesImgConfig();
+        InitWearModule();
 
         // 启动绘制线程
         new PaintThread().start();
@@ -114,6 +120,18 @@ public class GameFrame extends Frame {
         });
 
         setVisible(true);
+    }
+
+    private void InitWearModule() {
+        // 1. 实现图片加载器（将主窗口的loadImage方法适配给wear模块）
+        ClothesConfig.ImageLoader imageLoader = imagePath -> GameFrame.this.loadImage(imagePath);
+
+        // 2. 初始化衣服配置（资源加载、配置构建由wear模块内部完成）
+        clothesConfig = new ClothesConfig(imageLoader);
+
+        // 3. 设置初始衣服图片
+        currentClothesImg = clothesConfig.getInitialClothesImg();
+
     }
 
     private void showInputDialog() {
@@ -182,7 +200,8 @@ public class GameFrame extends Frame {
                 totalScore = 0; // 重置分数
                 break;
             case "wear":
-                showClothesDialog(); // 打开衣服颜色配置对话框
+                // showClothesDialog(); // 打开衣服颜色配置对话框
+                openClothesSelectDialog();
                 break;
             case "count":
                 // showCountDialog(); // 打开代码行数统计对话框
@@ -198,114 +217,138 @@ public class GameFrame extends Frame {
         }
     }
 
+    // 解耦的wear
+    private void openClothesSelectDialog() {
+        new ShowClothesSelectDialog(
+                this, // 父窗口
+                clothesConfig.getClothesImgConfig(), // 从wear模块获取配置
+                new ClothesCallback() {
+                    @Override
+                    public void onSelectSuccess(Image selectedClothes, String selectInfo) {
+                        currentClothesImg = selectedClothes;
+                        showTipDialog("已更换为：" + selectInfo);
+                    }
+
+                    @Override
+                    public void onSelectFailure(String errorMsg) {
+                        showTipDialog(errorMsg);
+                    }
+
+                    @Override
+                    public void onSelectCanceled() {
+                        // 取消选择时可添加逻辑（可选）
+                    }
+                }).setVisible(true);
+    }
+
     // wear命令
     // 初始化衣服: 季节->时间->天气->衣服图片
-    private void initClothesImgConfig() {
-        // 夏季配置
-        Map<String, Map<String, Image>> summerConfig = new HashMap<>();
-        Map<String, Image> summerDay = new HashMap<>();
-        summerDay.put("晴天", summerDaySunny);
-        summerDay.put("雨天", summerDayRainy);
-        Map<String, Image> summerNight = new HashMap<>();
-        summerNight.put("晴天", summerNightSunny);
-        summerNight.put("雨天", summerNightRainy);
-        summerConfig.put("白天", summerDay);
-        summerConfig.put("晚上", summerNight);
+    // private void initClothesImgConfig() {
+    // // 夏季配置
+    // Map<String, Map<String, Image>> summerConfig = new HashMap<>();
+    // Map<String, Image> summerDay = new HashMap<>();
+    // summerDay.put("晴天", summerDaySunny);
+    // summerDay.put("雨天", summerDayRainy);
+    // Map<String, Image> summerNight = new HashMap<>();
+    // summerNight.put("晴天", summerNightSunny);
+    // summerNight.put("雨天", summerNightRainy);
+    // summerConfig.put("白天", summerDay);
+    // summerConfig.put("晚上", summerNight);
 
-        // 冬季配置
-        Map<String, Map<String, Image>> winterConfig = new HashMap<>();
-        Map<String, Image> winterDay = new HashMap<>();
-        winterDay.put("晴天", winterDaySunny);
-        winterDay.put("雨天", winterDayRainy);
-        Map<String, Image> winterNight = new HashMap<>();
-        winterNight.put("晴天", winterNightSunny);
-        winterNight.put("雨天", winterNightRainy);
-        winterConfig.put("白天", winterDay);
-        winterConfig.put("晚上", winterNight);
+    // // 冬季配置
+    // Map<String, Map<String, Image>> winterConfig = new HashMap<>();
+    // Map<String, Image> winterDay = new HashMap<>();
+    // winterDay.put("晴天", winterDaySunny);
+    // winterDay.put("雨天", winterDayRainy);
+    // Map<String, Image> winterNight = new HashMap<>();
+    // winterNight.put("晴天", winterNightSunny);
+    // winterNight.put("雨天", winterNightRainy);
+    // winterConfig.put("白天", winterDay);
+    // winterConfig.put("晚上", winterNight);
 
-        clothesImgConfig.put("夏季", summerConfig);
-        clothesImgConfig.put("冬季", winterConfig);
-    }
+    // clothesImgConfig.put("夏季", summerConfig);
+    // clothesImgConfig.put("冬季", winterConfig);
+    // }
 
     // 衣服图片选择对话框
-    private void showClothesDialog() {
-        JDialog clothesDialog = new JDialog(this, "选择衣服图片", true);
-        clothesDialog.setSize(400, 300);
-        clothesDialog.setLocationRelativeTo(this);
-        clothesDialog.setLayout(null);
-        clothesDialog.setBackground(Color.WHITE);
+    // private void showClothesDialog() {
+    // JDialog clothesDialog = new JDialog(this, "选择衣服图片", true);
+    // clothesDialog.setSize(400, 300);
+    // clothesDialog.setLocationRelativeTo(this);
+    // clothesDialog.setLayout(null);
+    // clothesDialog.setBackground(Color.WHITE);
 
-        // 季节选择
-        Label seasonLabel = new Label("选择季节：");
-        seasonLabel.setBounds(50, 60, 60, 25);
-        seasonLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        clothesDialog.add(seasonLabel);
+    // // 季节选择
+    // Label seasonLabel = new Label("选择季节：");
+    // seasonLabel.setBounds(50, 60, 60, 25);
+    // seasonLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+    // clothesDialog.add(seasonLabel);
 
-        String[] seasons = { "夏季", "冬季" };
-        JComboBox<String> seasonCombo = new JComboBox<>(seasons);
-        seasonCombo.setBounds(120, 60, 100, 25);
-        seasonCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        clothesDialog.add(seasonCombo);
+    // String[] seasons = { "夏季", "冬季" };
+    // JComboBox<String> seasonCombo = new JComboBox<>(seasons);
+    // seasonCombo.setBounds(120, 60, 100, 25);
+    // seasonCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+    // clothesDialog.add(seasonCombo);
 
-        // 时间选择
-        Label timeLabel = new Label("选择时间：");
-        timeLabel.setBounds(50, 110, 60, 25);
-        timeLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        clothesDialog.add(timeLabel);
+    // // 时间选择
+    // Label timeLabel = new Label("选择时间：");
+    // timeLabel.setBounds(50, 110, 60, 25);
+    // timeLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+    // clothesDialog.add(timeLabel);
 
-        String[] times = { "白天", "晚上" };
-        JComboBox<String> timeCombo = new JComboBox<>(times);
-        timeCombo.setBounds(120, 110, 100, 25);
-        timeCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        clothesDialog.add(timeCombo);
+    // String[] times = { "白天", "晚上" };
+    // JComboBox<String> timeCombo = new JComboBox<>(times);
+    // timeCombo.setBounds(120, 110, 100, 25);
+    // timeCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+    // clothesDialog.add(timeCombo);
 
-        // 天气选择
-        Label weatherLabel = new Label("选择天气：");
-        weatherLabel.setBounds(50, 160, 60, 25);
-        weatherLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        clothesDialog.add(weatherLabel);
+    // // 天气选择
+    // Label weatherLabel = new Label("选择天气：");
+    // weatherLabel.setBounds(50, 160, 60, 25);
+    // weatherLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+    // clothesDialog.add(weatherLabel);
 
-        String[] weathers = { "晴天", "雨天" };
-        JComboBox<String> weatherCombo = new JComboBox<>(weathers);
-        weatherCombo.setBounds(120, 160, 100, 25);
-        weatherCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        clothesDialog.add(weatherCombo);
+    // String[] weathers = { "晴天", "雨天" };
+    // JComboBox<String> weatherCombo = new JComboBox<>(weathers);
+    // weatherCombo.setBounds(120, 160, 100, 25);
+    // weatherCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+    // clothesDialog.add(weatherCombo);
 
-        // 确认按钮
-        JButton confirmBtn = new JButton("确认选择");
-        confirmBtn.setBounds(150, 220, 100, 30);
-        confirmBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        confirmBtn.setBackground(new Color(66, 133, 244));
-        confirmBtn.setForeground(Color.BLACK);
-        confirmBtn.setBorderPainted(false);
-        confirmBtn.setFocusPainted(false);
-        confirmBtn.addActionListener(e -> {
-            String season = (String) seasonCombo.getSelectedItem();
-            String time = (String) timeCombo.getSelectedItem();
-            String weather = (String) weatherCombo.getSelectedItem();
+    // // 确认按钮
+    // JButton confirmBtn = new JButton("确认选择");
+    // confirmBtn.setBounds(150, 220, 100, 30);
+    // confirmBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+    // confirmBtn.setBackground(new Color(66, 133, 244));
+    // confirmBtn.setForeground(Color.BLACK);
+    // confirmBtn.setBorderPainted(false);
+    // confirmBtn.setFocusPainted(false);
+    // confirmBtn.addActionListener(e -> {
+    // String season = (String) seasonCombo.getSelectedItem();
+    // String time = (String) timeCombo.getSelectedItem();
+    // String weather = (String) weatherCombo.getSelectedItem();
 
-            // 根据选择获取对应的衣服图片并更新当前衣服
-            Image targetClothes = clothesImgConfig.get(season).get(time).get(weather);
-            if (targetClothes != null) {
-                currentClothesImg = targetClothes;
-                showTipDialog(String.format("已更换为：%s-%s-%s 衣服", season, time, weather));
-            } else {
-                showTipDialog("未找到对应衣服图片配置！");
-            }
-            clothesDialog.dispose();
-        });
-        clothesDialog.add(confirmBtn);
+    // // 根据选择获取对应的衣服图片并更新当前衣服
+    // Image targetClothes = clothesImgConfig.get(season).get(time).get(weather);
+    // if (targetClothes != null) {
+    // currentClothesImg = targetClothes;
+    // showTipDialog(String.format("已更换为：%s-%s-%s 衣服", season, time, weather));
+    // } else {
+    // showTipDialog("未找到对应衣服图片配置！");
+    // }
+    // clothesDialog.dispose();
+    // });
+    // clothesDialog.add(confirmBtn);
 
-        // 关闭事件
-        clothesDialog.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                clothesDialog.dispose();
-            }
-        });
+    // // 关闭事件
+    // clothesDialog.addWindowListener(new WindowAdapter() {
+    // @Override
+    // public void windowClosing(WindowEvent e) {
+    // clothesDialog.dispose();
+    // }
+    // });
 
-        clothesDialog.setVisible(true);
-    }
+    // clothesDialog.setVisible(true);
+    // }
 
     // count命令
     // 代码行数统计结果模型
@@ -346,344 +389,6 @@ public class GameFrame extends Frame {
         }
     }
 
-    // 代码行数统计对话框
-    // 弃用 改为类包装功能
-    private void showCountDialog() {
-
-        JDialog countDialog = new JDialog(this, "code line count", true);
-        countDialog.setSize(550, 350);
-        countDialog.setLocationRelativeTo(this);
-        countDialog.setLayout(new BorderLayout());
-        // countDialog.setBackground(Color.WHITE);
-        GridBagConstraints gbc = new GridBagConstraints();
-
-        // 左侧功能选择区
-        JPanel sidebar = new JPanel();
-        sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.PAGE_AXIS));
-        sidebar.setPreferredSize(new Dimension(200, 0));
-        sidebar.setBackground(new Color(240, 240, 240));
-        sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.LIGHT_GRAY));
-        // title
-        JLabel titleLabel = new JLabel("code line count");
-        titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        sidebar.add(Box.createVerticalStrut(10));
-        sidebar.add(titleLabel);
-        sidebar.add(Box.createVerticalStrut(20));
-
-        // select language
-        JPanel selectLangPanel = new JPanel();
-        JLabel langLabel = new JLabel("language:");
-        langLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        selectLangPanel.add(langLabel);
-
-        Map<String, String[]> langExtensions = new HashMap<>();
-        langExtensions.put("Java", new String[] { ".java" });
-        langExtensions.put("Python", new String[] { ".py" });
-        langExtensions.put("JavaScript", new String[] { ".js", ".jsx", ".ts", ".tsx"
-        });
-        langExtensions.put("All", new String[] { ".java", ".py", ".js", ".jsx",
-                ".ts", ".tsx" });
-        JComboBox<String> langCombo = new JComboBox<>(langExtensions.keySet().toArray(new String[0]));
-        langCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        selectLangPanel.add(langCombo);
-        sidebar.add(selectLangPanel);
-        sidebar.add(Box.createVerticalStrut(5));
-
-        // 是否统计空行,注释行
-        JPanel checkBoxPanel = new JPanel();
-        JCheckBox emptyLineBox = new JCheckBox("count empty lines");
-        emptyLineBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        checkBoxPanel.add(emptyLineBox);
-
-        JCheckBox commentBox = new JCheckBox("count comments");
-        commentBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        checkBoxPanel.add(commentBox);
-        sidebar.add(checkBoxPanel);
-        // save to file
-        JCheckBox saveToFileBox = new JCheckBox("save result to file");
-        saveToFileBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        checkBoxPanel.add(saveToFileBox);
-
-        // format
-        JLabel formatLabel = new JLabel("format:");
-        formatLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        checkBoxPanel.add(formatLabel);
-
-        String[] formats = { "csv", "json", "xlsx" };
-        JComboBox<String> formatCombo = new JComboBox<>(formats);
-        formatCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        checkBoxPanel.add(formatCombo);
-        sidebar.add(Box.createVerticalStrut(5));
-
-        countDialog.add(sidebar, BorderLayout.WEST);
-
-        // 功能区
-        JPanel mainContent = new JPanel();
-        mainContent.setLayout(new GridBagLayout());
-        countDialog.add(mainContent, BorderLayout.CENTER);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        // path
-        JLabel pathLabel = new JLabel("path:");
-        pathLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.gridwidth = 1;
-        gbc.insets = new Insets(0, 0, 10, 10);
-        mainContent.add(pathLabel, gbc);
-
-        JTextArea pathField = new JTextArea(System.getProperty("user.dir"));
-        pathField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        pathField.setLineWrap(true);
-        pathField.setWrapStyleWord(true);
-        JScrollPane pathScrollPane = new JScrollPane(pathField);
-        pathScrollPane.setPreferredSize(new Dimension(400, 25));
-        gbc.gridx = 1;
-        gbc.gridy = 1;
-        gbc.gridwidth = 1;
-        mainContent.add(pathScrollPane, gbc);
-
-        JButton browseBtn = new JButton("browse");
-        browseBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
-        browseBtn.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            int result = fileChooser.showOpenDialog(countDialog);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                pathField.setText(fileChooser.getSelectedFile().getAbsolutePath());
-            }
-        });
-        gbc.gridx = 2;
-        gbc.gridy = 1;
-        gbc.gridwidth = 1;
-        mainContent.add(browseBtn, gbc);
-
-        // save path
-        JTextArea savePathField = new JTextArea(System.getProperty("user.dir") + File.separator + "count_result.csv");
-        savePathField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        savePathField.setLineWrap(true);
-        savePathField.setWrapStyleWord(true);
-        JScrollPane savePathScrollPane = new JScrollPane(savePathField);
-        savePathScrollPane.setPreferredSize(new Dimension(400, 25));
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.gridwidth = 2;
-        mainContent.add(savePathScrollPane, gbc);
-        JButton browseSaveBtn = new JButton("save to");
-        browseSaveBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
-        browseSaveBtn.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setSelectedFile(new File(savePathField.getText()));
-            int result = fileChooser.showSaveDialog(countDialog);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                savePathField.setText(fileChooser.getSelectedFile().getAbsolutePath());
-            }
-        });
-        gbc.gridx = 2;
-        gbc.gridy = 5;
-        gbc.gridwidth = 1;
-        mainContent.add(browseSaveBtn, gbc);
-        // count btn
-        JButton countBtn = new JButton("start count");
-        countBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        countBtn.setForeground(Color.BLACK);
-        countBtn.setBackground(new Color(66, 133, 244));
-
-        countBtn.addActionListener(e -> {
-            String folderPath = pathField.getText().trim();
-            String language = (String) langCombo.getSelectedItem();
-            boolean countEmpty = emptyLineBox.isSelected();
-            boolean countComment = commentBox.isSelected();
-
-            // 验证文件夹是否存在
-            File folder = new File(folderPath);
-            if (!folder.exists() || !folder.isDirectory()) {
-                showTipDialog("file not exist or not a folder!");
-                return;
-            }
-
-            // 异步统计（避免阻塞UI）
-            new Thread(() -> {
-                try {
-                    String[] extensions = langExtensions.get(language);
-                    CodeLineCountResult result = countCodeLines(folder, extensions, countEmpty,
-                            countComment);
-
-                    // 显示统计结果
-                    SwingUtilities.invokeLater(() -> {
-                        String resultMsg = String.format(
-                                "统计结果：\n" +
-                                        "目标文件夹：%s\n" +
-                                        "语言类型：%s\n" +
-                                        "总文件数：%d\n" +
-                                        "总行数：%d\n" +
-                                        "空行数：%d\n" +
-                                        "注释行数：%d\n" +
-                                        "有效代码行数：%d",
-                                folderPath, language,
-                                result.getFileCount(), result.getTotalLines(),
-                                result.getEmptyLines(), result.getCommentLines(),
-                                result.getCodeLines());
-                        // 如果勾选了保存，则在后台写入文件
-                        if (saveToFileBox.isSelected()) {
-                            String path = savePathField.getText().trim();
-                            String fmt = (String) formatCombo.getSelectedItem();
-                            if (path.isEmpty()) {
-                                showTipDialog("请先选择保存路径！\n" + resultMsg);
-                            } else {
-                                // 执行保存（在后台线程完成，回调提示）
-                                new Thread(() -> {
-                                    try {
-                                        File outFile = new File(path);
-                                        if (fmt.equalsIgnoreCase("csv")) {
-                                            saveResultAsCSV(result, outFile);
-                                        } else if (fmt.equalsIgnoreCase("json")) {
-                                            saveResultAsJSON(result, outFile);
-                                        } else if (fmt.equalsIgnoreCase("xlsx")) {
-                                            saveResultAsXLSX(result, outFile);
-                                        }
-                                        SwingUtilities.invokeLater(
-                                                () -> showTipDialog(resultMsg + "\n已保存到：" + outFile.getAbsolutePath()));
-                                    } catch (Exception saveEx) {
-                                        SwingUtilities.invokeLater(
-                                                () -> showTipDialog(resultMsg + "\n保存失败：" + saveEx.getMessage()));
-                                    }
-                                }).start();
-                            }
-                        } else {
-                            showTipDialog(resultMsg);
-                        }
-                    });
-                } catch (Exception ex) {
-                    SwingUtilities.invokeLater(() -> showTipDialog("统计失败：" + ex.getMessage()));
-                }
-            }).start();
-            countDialog.dispose();
-        });
-
-        gbc.gridx = 1;
-        gbc.gridy = 6;
-        gbc.gridwidth = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        mainContent.add(countBtn, gbc);
-        countDialog.add(mainContent, BorderLayout.CENTER);
-        countDialog.setVisible(true);
-    }
-
-    // 代码行数统计核心方法
-    private CodeLineCountResult countCodeLines(File folder, String[] extensions, boolean countEmpty,
-            boolean countComment) throws IOException {
-        int fileCount = 0;
-        int totalLines = 0;
-        int emptyLines = 0;
-        int commentLines = 0;
-
-        // 遍历文件夹下所有指定后缀的文件
-        File[] files = folder.listFiles((dir, name) -> {
-            for (String ext : extensions) {
-                if (name.toLowerCase().endsWith(ext.toLowerCase())) {
-                    return true;
-                }
-            }
-            return false;
-        });
-
-        if (files == null)
-            return new CodeLineCountResult(0, 0, 0, 0, 0);
-
-        for (File file : files) {
-            if (file.isFile()) {
-                fileCount++;
-                List<String> lines = java.nio.file.Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
-                totalLines += lines.size();
-
-                boolean inBlockComment = false;
-                for (String line : lines) {
-                    String trimmedLine = line.trim();
-
-                    // 统计空行
-                    if (trimmedLine.isEmpty()) {
-                        emptyLines++;
-                        continue;
-                    }
-
-                    // 统计注释行（支持//和/* */）
-                    if (inBlockComment) {
-                        commentLines++;
-                        if (trimmedLine.endsWith("*/")) {
-                            inBlockComment = false;
-                        }
-                    } else {
-                        if (trimmedLine.startsWith("//")) {
-                            commentLines++;
-                        } else if (trimmedLine.startsWith("/*")) {
-                            commentLines++;
-                            if (!trimmedLine.endsWith("*/")) {
-                                inBlockComment = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 计算有效代码行数
-        int codeLines = totalLines;
-        if (!countEmpty)
-            codeLines -= emptyLines;
-        if (!countComment)
-            codeLines -= commentLines;
-
-        return new CodeLineCountResult(fileCount, totalLines, emptyLines, commentLines, codeLines);
-    }
-
-    // ---------- 保存统计结果的方法 ----------
-    private void saveResultAsCSV(CodeLineCountResult result, File file) throws IOException {
-        try (BufferedWriter bw = java.nio.file.Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
-            bw.write("fileCount,totalLines,emptyLines,commentLines,codeLines\n");
-            bw.write(String.format("%d,%d,%d,%d,%d\n", result.getFileCount(), result.getTotalLines(),
-                    result.getEmptyLines(), result.getCommentLines(), result.getCodeLines()));
-        }
-    }
-
-    private void saveResultAsJSON(CodeLineCountResult result, File file) throws IOException {
-        String json = String.format(
-                "{\n  \"fileCount\": %d,\n  \"totalLines\": %d,\n  \"emptyLines\": %d,\n  \"commentLines\": %d,\n  \"codeLines\": %d\n}",
-                result.getFileCount(), result.getTotalLines(), result.getEmptyLines(), result.getCommentLines(),
-                result.getCodeLines());
-        java.nio.file.Files.write(file.toPath(), json.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private void saveResultAsXLSX(CodeLineCountResult result, File file) throws IOException {
-        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            XSSFSheet sheet = workbook.createSheet("count");
-            XSSFRow header = sheet.createRow(0);
-            header.createCell(0).setCellValue("fileCount");
-            header.createCell(1).setCellValue("totalLines");
-            header.createCell(2).setCellValue("emptyLines");
-            header.createCell(3).setCellValue("commentLines");
-            header.createCell(4).setCellValue("codeLines");
-
-            XSSFRow data = sheet.createRow(1);
-            data.createCell(0).setCellValue(result.getFileCount());
-            data.createCell(1).setCellValue(result.getTotalLines());
-            data.createCell(2).setCellValue(result.getEmptyLines());
-            data.createCell(3).setCellValue(result.getCommentLines());
-            data.createCell(4).setCellValue(result.getCodeLines());
-
-            try (FileOutputStream fos = new FileOutputStream(file)) {
-                workbook.write(fos);
-            }
-        }
-    }
-
-    // 补充缺失的BufferedImage内部类（避免编译错误）
-    private static class BufferedImage extends java.awt.image.BufferedImage {
-        public BufferedImage(int width, int height, int imageType) {
-            super(width, height, imageType);
-        }
-    }
-
     // 提示对话框 输入对话出错提示
     private void showTipDialog(String message) {
         Dialog tipDialog = new Dialog(this, "提示", true);
@@ -715,12 +420,12 @@ public class GameFrame extends Frame {
         tipDialog.setVisible(true);
     }
 
-    // 子弹的大小
+    // 红包的大小
     Size small = new SmallSize();
     Size medium = new MediumSize();
     Size large = new LargeSize();
 
-    // 子弹类
+    // 子弹类x 红包类✅
     class Bullet {
         int x; // 子弹x坐标
         int y; // 子弹y坐标
