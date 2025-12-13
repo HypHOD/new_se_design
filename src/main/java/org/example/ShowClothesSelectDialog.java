@@ -7,9 +7,6 @@ import java.awt.event.WindowEvent;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * 衣服选择对话框（完全独立，仅依赖配置和回调）
- */
 public class ShowClothesSelectDialog extends JDialog {
     private final Map<String, Map<String, Map<String, Image>>> clothesImgConfig;
     private final ClothesCallback callback;
@@ -33,9 +30,7 @@ public class ShowClothesSelectDialog extends JDialog {
         initUI();
     }
 
-    /**
-     * 初始化对话框界面
-     */
+    // 初始化对话框
     private void initUI() {
         setSize(400, 300);
         setLocationRelativeTo(getParent());
@@ -59,9 +54,7 @@ public class ShowClothesSelectDialog extends JDialog {
         });
     }
 
-    /**
-     * 季节选择组件（动态从配置提取季节）
-     */
+    // 季节选择
     private void addSeasonComponent() {
         Label seasonLabel = new Label("选择季节：");
         seasonLabel.setBounds(50, 60, 60, 25);
@@ -75,9 +68,7 @@ public class ShowClothesSelectDialog extends JDialog {
         add(seasonCombo);
     }
 
-    /**
-     * 时间选择组件（固定白天/晚上）
-     */
+    // 时间选择
     private void addTimeComponent() {
         Label timeLabel = new Label("选择时间：");
         timeLabel.setBounds(50, 110, 60, 25);
@@ -91,16 +82,13 @@ public class ShowClothesSelectDialog extends JDialog {
         add(timeCombo);
     }
 
-    /**
-     * 天气选择组件（动态从配置提取天气）
-     */
+    // 天气选择
     private void addWeatherComponent() {
         Label weatherLabel = new Label("选择天气：");
         weatherLabel.setBounds(50, 160, 60, 25);
         weatherLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         add(weatherLabel);
 
-        // 从第一个季节的第一个时间提取天气选项
         String[] weathers = { "晴天", "雨天" };
         weatherCombo = new JComboBox<>(weathers);
         weatherCombo.setBounds(120, 160, 100, 25);
@@ -108,9 +96,7 @@ public class ShowClothesSelectDialog extends JDialog {
         add(weatherCombo);
     }
 
-    /**
-     * 确认按钮及逻辑
-     */
+    // 确认按钮
     private void addConfirmButton() {
         JButton confirmBtn = new JButton("确认选择");
         confirmBtn.setBounds(150, 220, 100, 30);

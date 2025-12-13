@@ -23,7 +23,7 @@ public class ClothesConfig {
     private final Map<String, Map<String, Map<String, Image>>> clothesImgConfig = new HashMap<>();
 
     public ClothesConfig(ImageLoader imageLoader) {
-        // 加载实际存在的图片（路径与你的文件完全一致）
+        // 加载实际存在的图片
         this.initialClothesImg = imageLoader.load("img/clothes/initial_clothes.png");
         // 夏季
         this.summerDaySunny = imageLoader.load("img/clothes/summer_day_sunny.png");
@@ -36,18 +36,16 @@ public class ClothesConfig {
         this.winterNightSunny = imageLoader.load("img/clothes/winter_night_sunny.png");
         this.winterNightRainy = imageLoader.load("img/clothes/winter_night_rainy.png");
 
-        // 初始化配置（只保留实际存在的季节/天气）
         initConfig();
     }
 
     private void initConfig() {
-        // ----------------- 夏季配置（对应实际图片） -----------------
         Map<String, Map<String, Image>> summerConfig = new HashMap<>();
-        // 夏季-白天（只有晴天、雨天）
+        // 夏季-白天
         Map<String, Image> summerDay = new HashMap<>();
         summerDay.put("晴天", summerDaySunny);
         summerDay.put("雨天", summerDayRainy);
-        // 夏季-晚上（只有晴天、雨天）
+        // 夏季-晚上
         Map<String, Image> summerNight = new HashMap<>();
         summerNight.put("晴天", summerNightSunny);
         summerNight.put("雨天", summerNightRainy);
@@ -55,13 +53,12 @@ public class ClothesConfig {
         summerConfig.put("晚上", summerNight);
         clothesImgConfig.put("夏季", summerConfig);
 
-        // ----------------- 冬季配置（对应实际图片） -----------------
         Map<String, Map<String, Image>> winterConfig = new HashMap<>();
-        // 冬季-白天（只有晴天、雨天）
+        // 冬季-白天
         Map<String, Image> winterDay = new HashMap<>();
         winterDay.put("晴天", winterDaySunny);
         winterDay.put("雨天", winterDayRainy);
-        // 冬季-晚上（只有晴天、雨天）
+        // 冬季-晚上
         Map<String, Image> winterNight = new HashMap<>();
         winterNight.put("晴天", winterNightSunny);
         winterNight.put("雨天", winterNightRainy);
@@ -70,7 +67,6 @@ public class ClothesConfig {
         clothesImgConfig.put("冬季", winterConfig);
     }
 
-    // 对外提供的接口
     public Image getInitialClothesImg() {
         return initialClothesImg;
     }
@@ -79,7 +75,6 @@ public class ClothesConfig {
         return clothesImgConfig;
     }
 
-    // 图片加载器接口（保持不变）
     public interface ImageLoader {
         Image load(String imagePath);
     }
