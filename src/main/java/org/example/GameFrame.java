@@ -52,7 +52,7 @@ public class GameFrame extends Frame {
     int bulletSpawnRate = 10; // 子弹生成概率（数值越大生成越慢）
 
     // 替换为红包
-    List<MoneyPocket> moneyPocketsList = new ArrayList<>();
+    // List<MoneyPocket> moneyPocketsList = new ArrayList<>();
     Random random2 = new Random();
     int moneypocketSpawnRate = 10;
 
