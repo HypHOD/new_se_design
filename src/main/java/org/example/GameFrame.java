@@ -263,7 +263,8 @@ public class GameFrame extends Frame {
                 "start - 开始游戏\n" +
                 "wear - 更换睡衣颜色\n" +
                 "count - 统计代码行数\n" +
-                "talk - 与AI对话");
+                "talk - 与AI对话\n" +
+                "query - 签到");
         // 添加滚动条（防止文本过多时溢出）
         JScrollPane scrollPane = new JScrollPane(tipArea);
         scrollPane.setPreferredSize(new Dimension(280, 80)); // 固定提示区域高度
@@ -316,16 +317,55 @@ public class GameFrame extends Frame {
                 break;
             case "count":
                 // showCountDialog(); // 打开代码行数统计对话框
-                CodeStatisticsUI.main(null);
+                // CodeStatisticsUI.main(null);
+                showCountDialog();
                 break;
             case "talk":
                 // new ShowTalkDialog(this).setVisible(true);
-                new TryAPI(this).setVisible(true);
+                // new TryAPI(this).setVisible(true);
+                showTalkDialog();
+                break;
+            case "query":
+                showQueryDialog();
                 break;
             default:
                 showTipDialog("Invalid command");
                 break;
         }
+    }
+
+    private void showCountDialog() {
+        new Thread(() -> {
+            SwingUtilities.invokeLater(() -> {
+                CodeStatisticsUI codeUI = new CodeStatisticsUI();
+                codeUI.setLocationRelativeTo(this);
+                codeUI.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                codeUI.setVisible(true);
+            });
+        }).start();
+    }
+
+    private void showTalkDialog() {
+        new Thread(() -> {
+            SwingUtilities.invokeLater(() -> {
+                TryAPI talkUI = new TryAPI(this);
+                talkUI.setLocationRelativeTo(this);
+                talkUI.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                talkUI.setVisible(true);
+            });
+        }).start();
+    }
+
+    private void showQueryDialog() {
+        new Thread(() -> {
+            SwingUtilities.invokeLater(() -> {
+                StudentManagerUI studentUI = new StudentManagerUI();
+                studentUI.setLocationRelativeTo(GameFrame.this); // 相对于游戏窗口居中
+                studentUI.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                studentUI.setAlwaysOnTop(true);
+                studentUI.setVisible(true);
+            });
+        }).start();
     }
 
     // 解耦的wear

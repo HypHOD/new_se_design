@@ -39,11 +39,11 @@ import javax.imageio.ImageIO;
  * 只负责UI展示和用户交互，通过调用业务服务实现功能
  */
 public class StudentManagerUI extends JFrame {
-    // 1. 业务服务依赖
+    // 业务服务依赖
     private StudentQueryAnalyze queryService;
     private StudentRandomQuery randomQueryService;
 
-    // 2. UI组件
+    // UI组件
     private JTable studentTable; // 学生数据展示表格
     private DefaultTableModel tableModel; // 表格数据模型
     private JLabel statusLabel; // 状态提示标签

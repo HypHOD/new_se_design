@@ -2,7 +2,7 @@ import sys
 import json
 import openai
 
-# ========== 配置 DeepSeek API 信息 ==========
+# ========== 配置 API 信息 ==========
 DEEPSEEK_API_KEY = "sk-uravkxhdaxzgoleppwxvdniatdkcfakljbhprjqrbjttkcvh"
 DEEPSEEK_BASE_URL = "https://api.siliconflow.cn/v1"  # 你的服务器地址
 MODEL_NAME = "deepseek-ai/DeepSeek-OCR"  # 对话模型（不要用OCR模型）
