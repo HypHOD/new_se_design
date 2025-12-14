@@ -1,5 +1,11 @@
 package org.example;
 
-public class PocketItem {
+public abstract class PocketItem {
+    protected Size size;
 
+    public PocketItem(Size size) {
+        this.size = size;
+    }
+
+    public abstract double calculateDamage();
 }

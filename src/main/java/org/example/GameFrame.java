@@ -282,7 +282,7 @@ public class GameFrame extends Frame {
             this.kind = kind;
             switch (kind) {
                 case "Cross": {
-                    this.damage = new CrossBullet(size).calculateDamage();
+                    this.damage = new CrossPocket(size).calculateDamage();
                 }
                     break;
                 case "Triangle": {
@@ -290,7 +290,7 @@ public class GameFrame extends Frame {
                 }
                     break;
                 case "Dot": {
-                    this.damage = new DotBullet(size).calculateDamage();
+                    this.damage = new DotPocket(size).calculateDamage();
                 }
                     break;
                 default:
