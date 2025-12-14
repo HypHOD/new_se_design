@@ -46,19 +46,19 @@ public class GameFrame extends Frame {
     int tankWidth = 100; // 坦克宽度
     int tankHeight = 50; // 坦克高度
 
+    // 通关配置
+    private static final int PASS_SCORE = 5; // 通关所需分数
+    private boolean isGamePassed = false; // 游戏是否通关
+    private Dialog passDialog; // 通关弹窗
+
     // 子弹管理
     List<Bullet> bulletList = new ArrayList<>();
     Random random = new Random(); // 用于生成随机值
-    int bulletSpawnRate = 10; // 子弹生成概率（数值越大生成越慢）
-
-    // 替换为红包
-    // List<MoneyPocket> moneyPocketsList = new ArrayList<>();
-    Random random2 = new Random();
-    int moneypocketSpawnRate = 10;
+    int bulletSpawnRate = 10; // 子弹生成概率,数值越大生成越慢
 
     // wear配置
-    private Image currentClothesImg; // 当前衣服图片（由wear模块管理）
-    private ClothesConfig clothesConfig; // wear模块的配置核心
+    private Image currentClothesImg; // 当前衣服图片
+    private ClothesConfig clothesConfig; // wear模块的配置
 
     public static void main(String[] args) {
         GameFrame frame = new GameFrame();
@@ -81,6 +81,8 @@ public class GameFrame extends Frame {
         // 初始化衣服颜色配置
         // initClothesImgConfig();
         InitWearModule();
+        // 通关弹窗
+        initPassDialog();
 
         // 启动绘制线程
         new PaintThread().start();
@@ -106,6 +108,128 @@ public class GameFrame extends Frame {
         });
 
         setVisible(true);
+    }
+
+    private void initPassDialog() {
+        passDialog = new Dialog(this, "游戏通关！", true);
+        passDialog.setSize(400, 300);
+        passDialog.setLocationRelativeTo(this);
+        passDialog.setLayout(null);
+        passDialog.setResizable(false);
+
+        // 通关标题
+        Label passTitle = new Label("恭喜通关！");
+        passTitle.setFont(new Font("Microsoft YaHei", Font.BOLD, 24));
+        passTitle.setForeground(new Color(233, 30, 99));
+        passTitle.setBounds(130, 50, 140, 30);
+        passDialog.add(passTitle);
+
+        // 通关信息（分数 + 用时）
+        Label scoreInfo = new Label("最终得分：" + totalScore);
+        scoreInfo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 16));
+        scoreInfo.setBounds(150, 100, 100, 20);
+        passDialog.add(scoreInfo);
+
+        Label timeInfo = new Label("用时：00:00");
+        timeInfo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 16));
+        timeInfo.setBounds(150, 130, 100, 20);
+        passDialog.add(timeInfo);
+
+        // 重新开始按钮
+        JButton restartBtn = new JButton("重新开始");
+        restartBtn.setBounds(80, 180, 100, 40);
+        restartBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        restartBtn.setBackground(new Color(76, 175, 80));
+        // restartBtn.setForeground(Color.WHITE);
+        restartBtn.setBorderPainted(false);
+        restartBtn.addActionListener(e -> {
+            restartGame(); // 重启游戏
+            passDialog.dispose();
+        });
+        passDialog.add(restartBtn);
+
+        // 退出按钮
+        JButton exitBtn = new JButton("退出游戏");
+        exitBtn.setBounds(220, 180, 100, 40);
+        exitBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        exitBtn.setBackground(new Color(244, 67, 54));
+        // exitBtn.setForeground(Color.WHITE);
+        exitBtn.setBorderPainted(false);
+        exitBtn.addActionListener(e -> System.exit(0));
+        passDialog.add(exitBtn);
+
+        // 弹窗关闭事件
+        passDialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                passDialog.dispose();
+                restartGame(); // 关闭弹窗后重启游戏
+            }
+        });
+    }
+
+    // 重启游戏功能
+    private void restartGame() {
+        totalScore = 0;
+        startTimeMillis = System.currentTimeMillis();
+        isGameStarted = true;
+        isGamePassed = false;
+        // 使用同步锁, 防止同时绘制
+        synchronized (bulletList) {
+            bulletList.clear(); // 清空子弹
+        }
+        tankX = 300; // 重置坦克位置
+        tankY = 300;
+        left = false;
+        right = false;
+        up = false;
+        down = false;
+
+        if (offScreenImage != null) {
+            offScreenImage.flush(); // 清空双缓冲图像
+            offScreenImage = null;
+        }
+        repaint();
+
+        // 更新通关弹窗的分数和时间显示
+        for (Component comp : passDialog.getComponents()) {
+            if (comp instanceof Label) {
+                Label label = (Label) comp;
+                if (label.getText().startsWith("最终得分：")) {
+                    label.setText("最终得分：" + totalScore);
+                } else if (label.getText().startsWith("用时：")) {
+                    label.setText("用时：00:00");
+                }
+            }
+        }
+    }
+
+    // 检测是否通关功能
+    private void checkGamePass() {
+        if (totalScore >= PASS_SCORE && !isGamePassed) {
+            isGamePassed = true;
+
+            // 计算通关用时
+            long elapsedSec = (System.currentTimeMillis() - startTimeMillis) / 1000;
+            long mm = elapsedSec / 60;
+            long ss = elapsedSec % 60;
+            String timeText = String.format("用时：%02d:%02d", mm, ss);
+
+            // 更新弹窗的分数和时间显示
+            for (Component comp : passDialog.getComponents()) {
+                if (comp instanceof Label) {
+                    Label label = (Label) comp;
+                    if (label.getText().startsWith("最终得分：")) {
+                        label.setText("最终得分：" + totalScore);
+                    } else if (label.getText().startsWith("用时：")) {
+                        label.setText(timeText);
+                    }
+                }
+            }
+
+            // 显示通关弹窗
+            passDialog.setVisible(true);
+        }
     }
 
     private void InitWearModule() {
@@ -264,72 +388,6 @@ public class GameFrame extends Frame {
     Size medium = new MediumSize();
     Size large = new LargeSize();
 
-    // 子弹类x 红包类✅
-    class Bullet {
-        int x; // 子弹x坐标
-        int y; // 子弹y坐标
-        int speed; // 子弹移动速度
-        int width = 10; // 子弹宽度
-        int height = 10; // 子弹高度
-        String kind;
-        double damage = 1.0;
-
-        // 子弹构造方法
-        public Bullet(int startX, int startY, int speed, String kind, Size size) {
-            this.x = startX;
-            this.y = startY;
-            this.speed = speed;
-            this.kind = kind;
-            switch (kind) {
-                case "Cross": {
-                    this.damage = new CrossPocket(size).calculateDamage();
-                }
-                    break;
-                case "Triangle": {
-                    this.damage = new TriangleBullet(size).calculateDamage();
-                }
-                    break;
-                case "Dot": {
-                    this.damage = new DotPocket(size).calculateDamage();
-                }
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        // 更新子弹位置（向右移动）
-        public void update() {
-            this.x += this.speed;
-        }
-
-        // 绘制子弹
-        public void draw(Graphics g) {
-            // 根据种类绘制不同的子弹
-            switch (kind) {
-                case "Cross": {
-                    // 画矩形
-                    g.setColor(Color.BLACK);
-                    g.fillRect(x, y, (int) (width * this.damage), (int) (height * this.damage));
-                }
-                    break;
-                case "Dot": {
-                    // 画圆形边框
-                    g.setColor(Color.YELLOW);
-                    g.drawRoundRect(x, y, (int) (width * this.damage), (int) (height * this.damage), 10, 10);
-                }
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        // 判断子弹是否超出屏幕
-        public boolean isOutOfScreen() {
-            return this.x > GameFrame.this.getWidth();
-        }
-    }
-
     // 绘制线程
     class PaintThread extends Thread {
         @Override
@@ -401,7 +459,7 @@ public class GameFrame extends Frame {
                 tankY += 5;
         }
 
-        // 更新所有子弹
+        // 更新所有子弹-修改为使用独立类
         private void updateBullets() {
             for (int i = 0; i < bulletList.size(); i++) {
                 Bullet bullet = bulletList.get(i);
@@ -411,6 +469,9 @@ public class GameFrame extends Frame {
                 Rectangle tankRect = new Rectangle(tankX, tankY, tankWidth, tankHeight);
                 if (bulletRect.intersects(tankRect)) {
                     totalScore += (int) bulletList.get(i).damage;
+
+                    // 检测是否通关
+                    checkGamePass();
                     // duck.act();
                     // 改为异步执行
                     if (duck != null) {
@@ -421,7 +482,7 @@ public class GameFrame extends Frame {
                     i--;
                     continue;
                 }
-                if (bullet.isOutOfScreen()) {
+                if (bullet.isOutOfScreen(getWidth())) {
                     bulletList.remove(i); // 移除超出屏幕的子弹
                     i--; // 调整索引，避免漏检
                 }
@@ -547,18 +608,18 @@ public class GameFrame extends Frame {
         g.setColor(new Color(0, 0, 0, 150));
         g.fillRoundRect(baseX - 10, baseY - 18, totalWidth + 20, 25, 5, 5);
 
-        // 绘制文字（黄色，更醒目）
+        // 绘制文字
         g.setColor(Color.YELLOW);
         g.drawString(leftTimeText, baseX, baseY);
         g.drawString(leftScoreText, baseX + timeWidth, baseY);
         g.setColor(old);
-        // 右上角分数
+        // 分数
         g.setFont(new Font("Arial", Font.BOLD, 18));
         String scoreText = "Score: " + totalScore;
         int textWidth = g.getFontMetrics().stringWidth(scoreText);
         int textX = getWidth() - textWidth - 12;
         int textY = 24;
-        // 背景遮罩增强可读性
+        // 背景遮罩
         Color oldColor = g.getColor();
         g.setColor(new Color(0, 0, 0, 120));
         g.fillRoundRect(textX - 8, textY - 20, textWidth + 16, 26, 8, 8);

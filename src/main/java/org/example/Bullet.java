@@ -1,7 +1,6 @@
 package org.example;
 
 import java.awt.*;
-import java.awt.Graphics;
 
 /**
  * 解耦Bullet类
@@ -72,4 +71,22 @@ public class Bullet {
     public double getDamage() {
         return damage;
     }
+
+    // 基础接口
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
 }
