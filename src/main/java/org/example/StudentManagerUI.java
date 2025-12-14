@@ -35,11 +35,11 @@ import java.net.URL;
 import javax.imageio.ImageIO;
 
 /**
- * 学生管理系统Swing主界面
+ * 学生管理
  * 只负责UI展示和用户交互，通过调用业务服务实现功能
  */
 public class StudentManagerUI extends JFrame {
-    // 1. 业务服务依赖（初始化后注入）
+    // 1. 业务服务依赖
     private StudentQueryAnalyze queryService;
     private StudentRandomQuery randomQueryService;
 
@@ -54,7 +54,7 @@ public class StudentManagerUI extends JFrame {
     private Map<Integer, Boolean> lateMarkMap;// 记录迟到学生
 
     /**
-     * 构造函数：初始化UI和业务服务
+     * 初始化UI和业务服务
      */
     public StudentManagerUI() {
         // 初始化业务服务

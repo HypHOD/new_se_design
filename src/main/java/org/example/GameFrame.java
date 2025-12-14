@@ -56,7 +56,7 @@ public class GameFrame extends Frame {
     Random random = new Random(); // 用于生成随机值
     int bulletSpawnRate = 10; // 子弹生成概率,数值越大生成越慢
 
-    // wear配置
+    // wear配置rS
     private Image currentClothesImg; // 当前衣服图片
     private ClothesConfig clothesConfig; // wear模块的配置
 
