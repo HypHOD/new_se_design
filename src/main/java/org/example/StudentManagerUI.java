@@ -105,7 +105,7 @@ public class StudentManagerUI extends JFrame {
         // ---------------------- 中间表格展示区域 ----------------------
         // 表格列名
         String[] columnNames = { "ID", "姓名", "照片", "是否到场", "迟到", "补签", "请假" };
-        // 表格数据模型（空数据初始化）
+        // 表格数据模型
         tableModel = new DefaultTableModel(null, columnNames) {
             // 指定可编辑列
             @Override
@@ -123,7 +123,7 @@ public class StudentManagerUI extends JFrame {
                 return super.getColumnClass(columnIndex);
             }
         };
-        // 创建表格（禁止编辑）
+        // 创建表格 数据项禁止编辑
         studentTable = new JTable(tableModel);
         studentTable.setDefaultEditor(Object.class, null); // 禁止表格单元格编辑
         studentTable.getTableHeader().setFont(new Font("宋体", Font.BOLD, 12)); // 表头字体
@@ -234,8 +234,6 @@ public class StudentManagerUI extends JFrame {
             }
         }).start();
         // 读取所有学生写入列表
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'queryAllStudents'");
     }
 
     protected void createAnalizeQueriedStudentsWindow() {
@@ -243,7 +241,7 @@ public class StudentManagerUI extends JFrame {
         // 允许对学生列表按照id、姓名、迟到次数、缺课次数排序
         // 根据本次点到的结果对学生迟到缺课次数做出修改
         // 增加结束签到按钮, 点击后将变化数据写回数据库
-        // todo: 新增迟到逻辑
+        // 新增迟到
 
         // 创建窗口
         JDialog analyzeDialog = new JDialog(this, "学生点名统计分析", true);
@@ -1272,15 +1270,15 @@ public class StudentManagerUI extends JFrame {
         // 用 StringBuilder 拼接字符串（效率高于直接 + 拼接，尤其条件多时）
         StringBuilder desc = new StringBuilder();
 
-        // 1. 先拼接「数量限制」（必选条件，始终显示）
+        // 先拼接「数量限制」（必选条件，始终显示）
         desc.append("数量限制").append(queryCount).append("人");
 
-        // 2. 拼接「迟到次数条件」（-1 表示不限制，不显示该条件）
+        // 拼接「迟到次数条件」（-1 表示不限制，不显示该条件）
         if (minLateCount != -1) {
             desc.append("，迟到次数>").append(minLateCount);
         }
 
-        // 3. 拼接「缺课次数条件」（-1 表示不限制，不显示该条件）
+        // 拼接「缺课次数条件」（-1 表示不限制，不显示该条件）
         if (minAbsentCount != -1) {
             desc.append("，缺课次数>").append(minAbsentCount);
         }
@@ -1323,10 +1321,6 @@ public class StudentManagerUI extends JFrame {
     }
 
     // 编辑补签按钮
-    // ---------------------- 补签按钮相关自定义组件 ----------------------
-    /**
-     * 按钮渲染器：用于在表格中显示按钮
-     */
     class ButtonRenderer extends JButton implements TableCellRenderer {
         public ButtonRenderer() {
             setOpaque(true);
