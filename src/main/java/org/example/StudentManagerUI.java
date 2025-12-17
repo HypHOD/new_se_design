@@ -104,20 +104,21 @@ public class StudentManagerUI extends JFrame {
 
         // ---------------------- 中间表格展示区域 ----------------------
         // 表格列名
-        String[] columnNames = { "ID", "姓名", "照片", "是否到场", "迟到", "补签" };
+        String[] columnNames = { "ID", "姓名", "照片", "是否到场", "迟到", "补签", "请假" };
         // 表格数据模型（空数据初始化）
         tableModel = new DefaultTableModel(null, columnNames) {
             // 指定可编辑列
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 5;
+                // 补签列(5)和请假列(6)可点击
+                return column == 5 || column == 6;
             }
 
-            // 指定补签列按钮
+            // 指定按钮列类型
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 4) {
-                    return JButton.class; // 补签列是按钮类型
+                if (columnIndex == 5 || columnIndex == 6) {
+                    return JButton.class; // 补签/请假列是按钮类型
                 }
                 return super.getColumnClass(columnIndex);
             }
@@ -153,10 +154,13 @@ public class StudentManagerUI extends JFrame {
         studentTable.getColumnModel().getColumn(3).setPreferredWidth(80); // 是否到场列
         studentTable.getColumnModel().getColumn(4).setPreferredWidth(80); // 迟到列
         studentTable.getColumnModel().getColumn(5).setPreferredWidth(80); // 补签按钮列
+        studentTable.getColumnModel().getColumn(6).setPreferredWidth(80); // 请假按钮列
 
-        // 补签按钮渲染
+        // 补签/请假按钮渲染
         studentTable.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
         studentTable.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JCheckBox()));
+        studentTable.getColumnModel().getColumn(6).setCellRenderer(new ButtonRenderer());
+        studentTable.getColumnModel().getColumn(6).setCellEditor(new ButtonEditor(new JCheckBox()));
 
         // ---------------------- 组装窗口 ----------------------
         add(buttonPanel, BorderLayout.NORTH); // 顶部按钮面板
@@ -200,7 +204,10 @@ public class StudentManagerUI extends JFrame {
                                     student.getStudent_id(),
                                     student.getName(),
                                     student.getAvatar_url(),
-                                    false
+                                    false,
+                                    false,
+                                    "补签",
+                                    "请假"
                             });
                         }
                         statusLabel.setText("查询成功：共加载 " + allStudents.size() + " 名学生数据");
@@ -1229,7 +1236,10 @@ public class StudentManagerUI extends JFrame {
                                     student.getStudent_id(),
                                     student.getName(),
                                     student.getAvatar_url(),
-                                    false
+                                    false,
+                                    false,
+                                    "补签",
+                                    "请假"
                             });
                         }
                         // 输出查询结果
@@ -1327,9 +1337,6 @@ public class StudentManagerUI extends JFrame {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value,
                 boolean isSelected, boolean hasFocus, int row, int column) {
-            // 设置按钮文本
-            setText((value == null) ? "" : value.toString());
-
             // 根据"是否到场"状态设置按钮是否可用
             boolean isPresent = (boolean) table.getValueAt(row, 3);
             setEnabled(!isPresent); // 未到场时可用，已到场时禁用
@@ -1340,7 +1347,14 @@ public class StudentManagerUI extends JFrame {
                 setText("已签到");
             } else {
                 setBackground(new Color(100, 149, 237));
-                setText("补签");
+                // 根据列显示不同文本（补签或请假）
+                if (column == 5) {
+                    setText("补签");
+                } else if (column == 6) {
+                    setText("请假");
+                } else {
+                    setText((value == null) ? "" : value.toString());
+                }
             }
 
             return this;
@@ -1355,6 +1369,7 @@ public class StudentManagerUI extends JFrame {
         private String label;
         private boolean isPushed;
         private int currentRow;
+        private int currentColumn;
 
         public ButtonEditor(JCheckBox checkBox) {
             super(checkBox);
@@ -1366,8 +1381,12 @@ public class StudentManagerUI extends JFrame {
             button.addActionListener(e -> {
                 fireEditingStopped(); // 停止编辑
                 if (isPushed) {
-                    // 执行补签操作
-                    doSupplementSign();
+                    // 根据当前列执行不同操作
+                    if (currentColumn == 5) {
+                        doSupplementSign();
+                    } else if (currentColumn == 6) {
+                        doLeaveSign();
+                    }
                 }
                 isPushed = false;
             });
@@ -1391,6 +1410,7 @@ public class StudentManagerUI extends JFrame {
             tableModel.setValueAt(true, currentRow, 3);
             // 刷新补签按钮状态
             tableModel.fireTableCellUpdated(currentRow, 5);
+            tableModel.fireTableCellUpdated(currentRow, 6);
 
             // 提示补签成功
             String studentName = tableModel.getValueAt(currentRow, 1).toString();
@@ -1400,10 +1420,33 @@ public class StudentManagerUI extends JFrame {
             speakQuery(studentName + "补签成功");
         }
 
+        /**
+         * 请假操作：点击请假也算签到成功（不计迟到）
+         */
+        private void doLeaveSign() {
+            int studentId = Integer.parseInt(tableModel.getValueAt(currentRow, 0).toString().trim());
+            // 请假算作签到成功，但不增加迟到
+            tableModel.setValueAt(false, currentRow, 4); // 不记为迟到
+            // 更新"是否到场"状态为true
+            tableModel.setValueAt(true, currentRow, 3);
+            // 清除迟到缓存（如有）
+            lateMarkMap.remove(studentId);
+
+            // 刷新按钮列显示
+            tableModel.fireTableCellUpdated(currentRow, 5);
+            tableModel.fireTableCellUpdated(currentRow, 6);
+
+            // 提示请假成功
+            String studentName = tableModel.getValueAt(currentRow, 1).toString();
+            statusLabel.setText("已为学生【" + studentName + "】标记请假（视为签到成功）");
+            speakQuery(studentName + "请假操作，视为签到成功");
+        }
+
         @Override
         public Component getTableCellEditorComponent(JTable table, Object value,
                 boolean isSelected, int row, int column) {
             currentRow = row;
+            currentColumn = column;
             label = (value == null) ? "" : value.toString();
             button.setText(label);
 
@@ -1415,7 +1458,11 @@ public class StudentManagerUI extends JFrame {
                 button.setBackground(Color.LIGHT_GRAY);
                 button.setText("已签到");
             } else {
-                button.setText("补签");
+                if (column == 5) {
+                    button.setText("补签");
+                } else if (column == 6) {
+                    button.setText("请假");
+                }
             }
 
             isPushed = true;

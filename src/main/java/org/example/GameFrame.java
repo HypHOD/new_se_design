@@ -308,6 +308,7 @@ public class GameFrame extends Frame {
             case "start":
                 // 启动游戏：设置状态为true，重置时间和分数
                 isGameStarted = true;
+                isGamePassed = false;
                 startTimeMillis = System.currentTimeMillis(); // 重置计时
                 totalScore = 0; // 重置分数
                 break;
@@ -501,6 +502,7 @@ public class GameFrame extends Frame {
 
         // 更新所有子弹-修改为使用独立类
         private void updateBullets() {
+
             for (int i = 0; i < bulletList.size(); i++) {
                 Bullet bullet = bulletList.get(i);
                 bullet.update(); // 移动子弹
